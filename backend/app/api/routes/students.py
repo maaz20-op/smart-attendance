@@ -1,25 +1,30 @@
-from fastapi import APIRouter, HTTPException, Depends
-from typing import List
-from ...schemas.user import Student
-from ...db.mongo import db
-# from ...schemas.student import StudentCreate, StudentOut
-from app.services.students import get_student_profile
+import uuid
+import os
+from fastapi import APIRouter, HTTPException, Depends, UploadFile, File
 from fastapi.responses import JSONResponse
+from bson import ObjectId
+
+from ...db.mongo import db
 from ...core.security import get_current_user
+from app.services.students import get_student_profile
 
 router = APIRouter(prefix="/students", tags=["students"])
 
+UPLOAD_DIR = "uploads/students"
+os.makedirs(UPLOAD_DIR, exist_ok=True)
 
-# Return logged in user details
+
+# ============================
+# GET MY PROFILE
+# ============================
 @router.get("/me/profile")
-async def api_get_my_profile(current_user: dict = Depends(get_current_user)):
-    
-    # print(current_user)
+async def api_get_my_profile(
+    current_user: dict = Depends(get_current_user)
+):
     if current_user.get("role") != "student":
         raise HTTPException(status_code=403, detail="Not a student")
 
-    student_id = current_user.get("id")
-    profile = await get_student_profile(student_id)
+    profile = await get_student_profile(current_user["id"])
 
     if not profile:
         raise HTTPException(status_code=404, detail="Student profile not found")
@@ -27,35 +32,102 @@ async def api_get_my_profile(current_user: dict = Depends(get_current_user)):
     return profile
 
 
-
-@router.get("/{students_id}/profile")
+# ============================
+# GET STUDENT PROFILE (PUBLIC)
+# ============================
+@router.get("/{student_id}/profile")
 async def api_get_student_profile(student_id: str):
     profile = await get_student_profile(student_id)
+
     if not profile:
-        raise HTTPException(status_code=401, detail="Student not found")
-    
-    return JSONResponse(content=profile)
+        raise HTTPException(status_code=404, detail="Student not found")
+
+    return profile
 
 
+# ============================
+# UPLOAD FACE IMAGE
+# ============================
+@router.post("/me/face-image")
+async def upload_image_url(
+    file: UploadFile = File(...),
+    current_user: dict = Depends(get_current_user)
+):
+    if current_user.get("role") != "student":
+        raise HTTPException(status_code=403, detail="Not a student")
+
+    if file.content_type not in ["image/jpeg", "image/png", "image/jpg"]:
+        raise HTTPException(status_code=400, detail="Only JPG/PNG allowed")
+
+    student_user_id = ObjectId(current_user["id"])
+
+    ext = file.filename.split(".")[-1]
+    filename = f"{current_user['id']}_{uuid.uuid4()}.{ext}"
+    file_path = os.path.join(UPLOAD_DIR, filename)
+
+    with open(file_path, "wb") as f:
+        f.write(await file.read())
+
+    image_url = f"/uploads/students/{filename}"
+
+    await db.students.update_one(
+        {"user_id": student_user_id},
+        {"$set": {"image_url": image_url}}
+    )
+
+    return {
+        "message": "Photo uploaded successfully",
+        "image_url": image_url
+    }
 
 
-# @router.get("/")
-# async def api_create_student(payload: StudentCreate):
-#     doc = await create_student(payload.dict())
-#     if not doc:
-#         raise HTTPException(status_code=400, detail="Create failed")
-    
-#     doc["_id"] = str(doc["_id"])
-#     return doc
+# ============================
+# GET AVAILABLE SUBJECTS
+# ============================
+@router.get("/me/available-subjects")
+async def get_available_subjects(
+    current_user: dict = Depends(get_current_user)
+):
+    if current_user.get("role") != "student":
+        raise HTTPException(status_code=403, detail="Not a student")
 
-# @router.get("/", response_model=list[StudentOut])
-# async def api_list_students(skip: int = 0, limit: int = 50):
-#     docs = await list_students(skip, limit)
-#     return docs
+    subjects = await db.subjects.find({}).to_list(None)
 
-# @router.get("/{student_id}", response_model=StudentOut)
-# async def api_get_student(student_id: str):
-#     doc = await get_student(student_id)
-#     if not doc:
-#         raise HTTPException(404, "Not found")
-#     return doc
+    # 🔴 IMPORTANT: Serialize ObjectIds
+    return [
+        {
+            "_id": str(sub["_id"]),
+            "name": sub["name"],
+            "code": sub.get("code"),
+            "type": sub.get("type"),
+            "professor_id": str(sub["professor_id"]),
+            "created_at": sub["created_at"]
+        }
+        for sub in subjects
+    ]
+
+
+# ============================
+# ADD SUBJECT TO STUDENT
+# ============================
+@router.post("/me/subjects")
+async def add_subject(
+    subject_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    if current_user.get("role") != "student":
+        raise HTTPException(status_code=403, detail="Not a student")
+
+    subject_oid = ObjectId(subject_id)
+    user_oid = ObjectId(current_user["id"])
+
+    subject = await db.subjects.find_one({"_id": subject_oid})
+    if not subject:
+        raise HTTPException(status_code=404, detail="Subject not found")
+
+    await db.students.update_one(
+        {"user_id": user_oid},
+        {"$addToSet": {"subjects": subject_oid}}
+    )
+
+    return {"message": "Subject added successfully"}

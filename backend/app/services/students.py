@@ -5,6 +5,7 @@ from datetime import datetime
 students_col = db["students"]
 users_col = db["users"]
 attendance_col = db["attendance"]
+subjects_col = db["subjects"]
 
 
 async def get_student_profile(user_id: str):
@@ -13,29 +14,49 @@ async def get_student_profile(user_id: str):
     - users collection
     - students collection
     - attendance summary
+    - populated subjects
     """
 
-    # 1. Get user document (contains name, email, branch)
+    # 1. Get user document
     user = await users_col.find_one({"_id": ObjectId(user_id)})
     if not user:
         return None
 
-    # 2. Get student doc using user_id
+    # 2. Get student document
     student = await students_col.find_one({"user_id": ObjectId(user_id)})
     if not student:
         return None
 
-    # 3. Build attendance summary
+    # 3. Attendance summary
     attendance_summary = await build_attendance_summary(student["_id"])
 
-    # 4. Merge everything into a single clean object
+    # 4. Populate subjects (ObjectId → subject objects)
+    subject_ids = student.get("subjects", [])
+
+    subjects = []
+    if subject_ids:
+        subject_cursor = subjects_col.find(
+            {"_id": {"$in": subject_ids}}
+        )
+        subjects = [
+            {
+                "_id": str(sub["_id"]),
+                "name": sub.get("name"),
+                "code": sub.get("code"),
+                "type": sub.get("type"),
+            }
+            async for sub in subject_cursor
+        ]
+
+    # 5. Build clean API-safe profile
     profile = {
         "id": str(student["_id"]),
+        "user_id": str(student["user_id"]),
         "name": user.get("name"),
         "email": user.get("email"),
         "branch": user.get("branch") or student.get("branch"),
         "year": student.get("year"),
-        "subjects": student.get("subjects", []),
+        "subjects": subjects,              # ✅ populated & serialized
         "avatarUrl": student.get("avatarUrl"),
         "attendance": attendance_summary,
         "recent_attendance": attendance_summary["recent_attendance"],
@@ -64,10 +85,15 @@ async def build_attendance_summary(student_doc_id: ObjectId):
     absent = total_classes - present
 
     percentage = round((present / total_classes) * 100, 2) if total_classes else 0
-    forecasted_score = 2 if percentage < 50 else 5  # example logic
+    forecasted_score = 2 if percentage < 50 else 5
 
-    # Last 5 records
-    recent_cursor = attendance_col.find(q).sort("date", -1).limit(5)
+    # Last 5 attendance records
+    recent_cursor = (
+        attendance_col.find(q)
+        .sort("date", -1)
+        .limit(5)
+    )
+
     recent = []
     async for r in recent_cursor:
         recent.append({
@@ -75,7 +101,7 @@ async def build_attendance_summary(student_doc_id: ObjectId):
             "date": r.get("date"),
             "period": r.get("period"),
             "present": r.get("present"),
-            "class_id": str(r.get("class_id")),
+            "class_id": str(r["class_id"]) if r.get("class_id") else None,
         })
 
     return {

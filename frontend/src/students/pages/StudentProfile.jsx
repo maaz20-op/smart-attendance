@@ -1,6 +1,8 @@
-import React from "react";
-import { useQuery } from "@tanstack/react-query";
+import React, { useState } from "react";
+import { useQuery, useMutation, useQueryClient  } from "@tanstack/react-query";
 import { fetchMyStudentProfile } from "../../api/auth.js";
+import {fetchAvailableSubjects, addSubjectToStudent } from "../../api/students.js"
+
 import { 
   ArrowLeft, 
   Upload, 
@@ -18,13 +20,42 @@ import {
 } from "lucide-react";
 import StudentNavigation from "../components/StudentNavigation"
 import { Link } from "react-router-dom";
+import { uploadFaceImage } from "../../api/students"
+import { useRef } from "react";
 
 export default function StudentProfile() {
+  const [open, setOpen] = useState(false);
+
   const {data, isLoading, isError, error} = useQuery({
     queryKey: ["myStudentProfile"],
     queryFn: fetchMyStudentProfile,
     retry: false,
   });
+
+  const {data: availableSubjects} = useQuery({
+    queryKey: ["availableSubjects"],
+    queryFn: fetchAvailableSubjects,
+    enabled: open,
+  })
+
+  const fileRef = useRef(null);
+  const queryClient = useQueryClient();
+
+  const uploadMutation = useMutation({
+    mutationFn: uploadFaceImage,
+    onSuccess: () => {
+      queryClient.invalidateQueries(["myStudentProfile"]);
+    }
+  });
+
+  const addSubjectMutation = useMutation({
+    mutationFn: addSubjectToStudent,
+    onSuccess: () => {
+      queryClient.invalidateQueries(["myStudentProfile"]);
+      setOpen(false);
+    }
+  });
+
 
   if (isLoading) return <div>Loading Profile...</div>;
   if (isError){
@@ -109,6 +140,19 @@ export default function StudentProfile() {
             </div>
           </div>
 
+          <input
+            type="file"
+            accept="image/*"
+            ref={fileRef}
+            hidden
+            onChange={(e) => {
+              if (e.target.files[0]) {
+                uploadMutation.mutate(e.target.files[0]);
+              }
+            }}
+          />
+
+
           {/* Card 2: Face Image Upload */}
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 space-y-4">
             <div className="flex justify-between items-start">
@@ -118,7 +162,9 @@ export default function StudentProfile() {
                   Upload a clear, high-quality photo. This will be used for face recognition during attendance.
                 </p>
               </div>
-              <button className="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-xl text-xs font-bold uppercase tracking-wide hover:bg-gray-50 transition shadow-sm active:scale-95 text-slate-600">
+              <button
+                onClick={() => fileRef.current.click()}
+               className="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-xl text-xs font-bold uppercase tracking-wide hover:bg-gray-50 transition shadow-sm active:scale-95 text-slate-600 cursor-pointer">
                 <Upload size={14} />
                 Upload photo
               </button>
@@ -167,6 +213,31 @@ export default function StudentProfile() {
           </div>
 
           {/* Card 4: Subjects */}
+          {open && (
+            <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+              <div className="bg-white rounded-xl p-6 w-80 space-y-4">
+                <h3 className="font-bold text-lg">Add Subject</h3>
+
+                {availableSubjects?.map(sub => (
+                  <button
+                    key={sub._id}
+                    onClick={() => addSubjectMutation.mutate(sub._id)}
+                    className="w-full text-left px-4 py-2 border rounded-lg hover:bg-gray-50"
+                  >
+                    {sub.name}
+                  </button>
+                ))}
+
+                <button
+                  onClick={() => setOpen(false)}
+                  className="text-sm text-gray-500"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
+
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 space-y-4">
             <div className="flex justify-between items-start">
               <div>
@@ -175,25 +246,32 @@ export default function StudentProfile() {
                   Keep your current subjects up to date for accurate attendance reports.
                 </p>
               </div>
-              <button className="flex items-center gap-1 px-3 py-1.5 border border-gray-200 rounded-lg text-xs font-bold hover:bg-gray-50 transition uppercase tracking-wide text-slate-600">
+
+              <button
+                onClick={() => setOpen(true)}
+                className="flex items-center gap-1 px-3 py-1.5 border border-gray-200 rounded-lg text-xs font-bold hover:bg-gray-50 transition uppercase tracking-wide text-slate-600"
+              >
                 <Plus size={14} />
                 Add subject
               </button>
             </div>
 
+            {/* ✅ Corrected subject rendering */}
             <div className="flex flex-wrap gap-3">
-              {data.subjects.map((sub) => (
-                <div key={sub} className="bg-blue-500 text-white px-4 py-2 rounded-full text-xs font-bold flex items-center gap-2 shadow-sm shadow-blue-200">
+              {data.subjects?.map((sub) => (
+                <div
+                  key={sub._id}
+                  className="bg-blue-500 text-white px-4 py-2 rounded-full text-xs font-bold flex items-center gap-2 shadow-sm shadow-blue-200"
+                >
                   <BookOpen size={14} className="opacity-80" />
-                  {sub}
+                  {sub.name}
+                  {sub.code && (
+                    <span className="opacity-70">({sub.code})</span>
+                  )}
                 </div>
               ))}
-              <button className="px-4 py-2 rounded-full text-xs font-bold text-slate-400 bg-gray-50 hover:bg-gray-100 flex items-center gap-1 transition">
-                <Plus size={14} /> Add more
-              </button>
             </div>
           </div>
-
         </div>
       </main>
       

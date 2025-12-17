@@ -49,6 +49,7 @@ def create_app() -> FastAPI:
     
     # serve static files (avatars)
     app.mount("/static", StaticFiles(directory="app/static"), name="static")
+    app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
     return app
 
