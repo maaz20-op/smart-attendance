@@ -25,8 +25,8 @@ function RedirectToHome() {
 
   if(!user) return <Navigate to={"/login"} />
 
-  if(user.role === "Teacher") return <Navigate to={"/dashboard"} />
-  if(user.role === "Student") return <Navigate to={"/student-dashboard"} />
+  if(user.role === "teacher") return <Navigate to={"/dashboard"} />
+  if(user.role === "student") return <Navigate to={"/student-dashboard"} />
 
   return <Navigate to={"/login"} />
 }
