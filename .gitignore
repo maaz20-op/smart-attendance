@@ -13,7 +13,6 @@ Thumbs.db
 # GIT
 # =========================
 .git/
-.gitignore
 
 # =========================
 # PYTHON (BACKEND)
@@ -55,7 +54,6 @@ ml-face-service/.pytest_cache/
 ml-face-service/.mypy_cache/
 ml-face-service/.ruff_cache/
 ml-face-service/storage/embeddings/*.json
-ml-face-service/storage/
 
 # ENV FILES (NEVER COMMIT)
 backend/.env
@@ -100,7 +98,6 @@ frontend/.cache/
 # =========================
 # DOCKER
 # =========================
-**/.dockerignore
 docker-compose.yml
 
 # =========================
