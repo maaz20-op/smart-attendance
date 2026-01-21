@@ -4,10 +4,8 @@ import base64
 from bson import ObjectId
 from datetime import date
 
-
 from app.db.mongo import db
-from app.utils.face_detect import detect_faces_and_embeddings
-from app.utils.match_utils import match_embedding
+from app.services.ml_client import ml_client
 
 router = APIRouter(prefix="/api/attendance", tags=["Attendance"])
 
@@ -19,6 +17,8 @@ UNCERTAIN_TH = 0.60
 @router.post("/mark")
 async def mark_attendance(payload: Dict):
     """
+    Mark attendance by detecting faces in classroom image
+    
     payload:
     {
       "image": "data:image/jpeg;base64,...",
@@ -29,7 +29,10 @@ async def mark_attendance(payload: Dict):
     image_b64 = payload.get("image")
     subject_id = payload.get("subject_id")
     
-    # load subject
+    if not image_b64 or not subject_id:
+        raise HTTPException(status_code=400, detail="image and subject_id required")
+    
+    # Load subject
     subject = await db.subjects.find_one(
         {"_id": ObjectId(subject_id)},
         {"students": 1}
@@ -44,10 +47,7 @@ async def mark_attendance(payload: Dict):
         if s.get("verified", False)
     ]
 
-    if not image_b64 or not subject_id:
-        raise HTTPException(status_code=400, detail="image and subject_id required")
-
-    # strip base64 header
+    # Strip base64 header
     if "," in image_b64:
         _, image_b64 = image_b64.split(",", 1)
 
@@ -56,13 +56,33 @@ async def mark_attendance(payload: Dict):
     except Exception:
         raise HTTPException(status_code=400, detail="Invalid base64 image")
 
-    # detect faces
-    faces = detect_faces_and_embeddings(image_bytes)
+    # Call ML service to detect faces
+    try:
+        ml_response = await ml_client.detect_faces(
+            image_base64=image_b64,
+            min_face_area_ratio=0.04,
+            num_jitters=3,
+            model="hog"
+        )
+        
+        if not ml_response.get("success"):
+            raise HTTPException(
+                status_code=500,
+                detail=f"ML service error: {ml_response.get('error', 'Unknown error')}"
+            )
+        
+        detected_faces = ml_response.get("faces", [])
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to detect faces: {str(e)}"
+        )
 
-    if not faces:
+    if not detected_faces:
         return {"faces": [], "count": 0}
 
-    # load students of this subject with embeddings
+    # Load students of this subject with embeddings
     students_cursor = db.students.find({
         "userId": {"$in": student_user_ids},
         "verified": True,
@@ -70,39 +90,70 @@ async def mark_attendance(payload: Dict):
     })
 
     students = await students_cursor.to_list(length=500)
+    
+    # Prepare candidate embeddings for batch matching
+    candidate_embeddings = []
+    for student in students:
+        candidate_embeddings.append({
+            "student_id": str(student["userId"]),
+            "embeddings": student["face_embeddings"]
+        })
 
+    # Call ML service to match faces
+    try:
+        match_response = await ml_client.batch_match(
+            detected_faces=[{"embedding": face["embedding"]} for face in detected_faces],
+            candidate_embeddings=candidate_embeddings,
+            confident_threshold=CONFIDENT_TH,
+            uncertain_threshold=UNCERTAIN_TH
+        )
+        
+        if not match_response.get("success"):
+            raise HTTPException(
+                status_code=500,
+                detail=f"ML service error: {match_response.get('error', 'Unknown error')}"
+            )
+        
+        matches = match_response.get("matches", [])
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to match faces: {str(e)}"
+        )
+
+    # Build results
     results = []
     
-    print("Faces detected:", len(faces))
+    print(f"Faces detected: {len(detected_faces)}")
 
-    for face in faces:
+    for i, (face, match) in enumerate(zip(detected_faces, matches)):
+        student_id = match.get("student_id")
+        distance = match.get("distance")
+        status = match.get("status")  # "present" or "unknown"
+        
+        # Find student details
         best_match = None
-        best_distance = 1e9
-
-
-        for student in students:
-            d = match_embedding(face["embedding"], student["face_embeddings"])
-            if d is not None and d < best_distance:
-                best_distance = d
-                best_match = student
-                
+        if student_id:
+            best_match = next((s for s in students if str(s["userId"]) == student_id), None)
+        
+        # Determine status based on distance
+        if distance < CONFIDENT_TH:
+            status = "present"
+        elif distance < UNCERTAIN_TH:
+            status = "uncertain"
+        else:
+            status = "unknown"
+            best_match = None
+        
         print(
             "MATCH:",
             best_match["name"] if best_match else "NONE",
             "distance:",
-            best_distance
+            distance
         )
-
-        # decide status
-        if best_distance < 0.50:
-            status = "present"          # strong match
-        elif best_distance < 0.60:
-            status = "uncertain"        # needs manual confirmation
-        else:
-            status = "unknown"
-            best_match = None
-
-            
+        
+        # Get user details
         user = None
         if best_match:
             user = await db.users.find_one(
@@ -110,18 +161,19 @@ async def mark_attendance(payload: Dict):
                 {"name": 1, "roll": 1}
             )
 
-
+        # Build result
+        location = face.get("location", {})
         results.append({
             "box": {
-                "top": face["box"][0],
-                "right": face["box"][1],
-                "bottom": face["box"][2],
-                "left": face["box"][3]
+                "top": location.get("top"),
+                "right": location.get("right"),
+                "bottom": location.get("bottom"),
+                "left": location.get("left")
             },
-            "status": status, 
-            "distance": None if not best_match else round(best_distance, 4),
+            "status": status,
+            "distance": None if not best_match else round(distance, 4),
             "confidence": None if not best_match else round(
-                max(0.0, 1.0 - best_distance), 3
+                max(0.0, 1.0 - distance), 3
             ),
             "student": None if not best_match else {
                 "id": str(best_match["userId"]),
@@ -129,9 +181,6 @@ async def mark_attendance(payload: Dict):
                 "name": best_match["name"]
             }
         })
-
-    # print("Image size:", len(image_bytes))
-    # print("Detected face locations:", faces)
     
     return {
         "faces": results,
@@ -141,11 +190,21 @@ async def mark_attendance(payload: Dict):
 
 @router.post("/confirm")
 async def confirm_attendance(payload: Dict):
+    """
+    Confirm attendance for students after manual review
+    
+    payload:
+    {
+      "subject_id": "...",
+      "present_students": ["id1", "id2", ...],
+      "absent_students": ["id3", "id4", ...]
+    }
+    """
     subject_id = payload.get("subject_id")
     present_students: List[str] = payload.get("present_students", [])
     absent_students: List[str] = payload.get("absent_students", [])
     
-    print("absent students ",absent_students)
+    print("absent students", absent_students)
     
     if not subject_id:
         raise HTTPException(status_code=400, detail="subject_id required")
@@ -155,7 +214,7 @@ async def confirm_attendance(payload: Dict):
     present_oids = [ObjectId(sid) for sid in present_students]
     absent_oids = [ObjectId(sid) for sid in absent_students]
     
-   # ✅ Mark PRESENT students
+    # Mark PRESENT students
     await db.subjects.update_one(
         {"_id": subject_oid},
         {
@@ -170,7 +229,7 @@ async def confirm_attendance(payload: Dict):
         ]
     )
     
-   # ✅ Mark ABSENT students
+    # Mark ABSENT students
     await db.subjects.update_one(
         {"_id": subject_oid},
         {
