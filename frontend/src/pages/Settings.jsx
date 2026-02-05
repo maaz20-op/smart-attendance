@@ -72,6 +72,18 @@ export default function Settings() {
   const [loaded, setLoaded] = useState(false);
   const [loadError, setLoadError] = useState(null);
 
+  // Extracted loader function for consistent data handling
+  async function loadProfile(data) {
+    setProfile({
+      name: data?.name ?? "",
+      email: data?.email ?? "",
+      phone: data?.phone ?? "",
+      role: data?.role ?? "",
+      subjects: data?.subjects ?? [],
+      avatarUrl: data?.avatarUrl ?? null,
+    });
+  }
+
   useEffect(() => {
   let mounted = true;
 
@@ -85,14 +97,8 @@ export default function Settings() {
 
       if (!mounted) return;
 
-      setProfile({
-        name: data?.name ?? "",
-        email: data?.email ?? "",
-        phone: data?.phone ?? "",
-        role: data?.role ?? "",
-        subjects: data?.subjects ?? [],
-        avatarUrl: data?.avatarUrl ?? null,
-      });
+      // Use consistent loader function
+      await loadProfile(data);
 
       setTheme(data?.theme ?? "Light");
 
@@ -144,14 +150,7 @@ export default function Settings() {
       // update local profile from server response (server returns serialized doc)
       const serverProfile = updated.profile ?? updated.settings?.profile ?? null;
       if (serverProfile) {
-        setProfile({
-          name: serverProfile.name ?? "",
-          email: serverProfile.email ?? "",
-          phone: serverProfile.phone ?? "",
-          role: serverProfile.role ?? "",
-          subjects: serverProfile.subjects ?? [],
-          avatarUrl: serverProfile.avatarUrl ?? null,
-        });
+        await loadProfile(serverProfile);
       }
       // optional: show toast success
     } catch (err) {
@@ -162,7 +161,7 @@ export default function Settings() {
     }
   }
 
-  // subject handlers
+  // subject handlers - FIXED: removed .profile nesting
   async function handleAddSubject(data) {
     try {
       // 1️⃣ Add subject (backend stores subject_id only)
@@ -171,15 +170,8 @@ export default function Settings() {
       // 2️⃣ Re-fetch full settings (backend returns populated subjects)
       const fresh = await getSettings();
 
-      // 3️⃣ Update profile from server (single source of truth)
-      setProfile({
-        name: fresh.profile?.name ?? "",
-        email: fresh.profile?.email ?? "",
-        phone: fresh.profile?.phone ?? "",
-        role: fresh.profile?.role ?? "",
-        subjects: fresh.profile?.subjects ?? [],
-        avatarUrl: fresh.profile?.avatarUrl ?? null,
-      });
+      // 3️⃣ Update profile from server using consistent loader (FIXED: removed .profile)
+      await loadProfile(fresh);
 
       setShowSubjectModal(false);
     } catch (e) {
@@ -214,7 +206,6 @@ export default function Settings() {
     return <div className="p-6">Loading settings…</div>;
   }
 
-  if (!loaded) return <div className="p-6">Loading settings…</div>;
   if (loadError) return <div className="p-6 text-rose-600">Failed to load settings: {loadError}</div>;
 
   return (
@@ -467,14 +458,7 @@ export default function Settings() {
                       (async () => {
                         try {
                           const fresh = await getSettings();
-                          setProfile({
-                            name: fresh.profile?.name ?? "",
-                            email: fresh.profile?.email ?? "",
-                            phone: fresh.profile?.phone ?? "",
-                            role: fresh.profile?.role ?? "",
-                            subjects: fresh.profile?.subjects ?? [],
-                            avatarUrl: fresh.profile?.avatarUrl ?? null,
-                          });
+                          await loadProfile(fresh);
                         } catch (e) {
                           console.error("Reload failed", e);
                         }
