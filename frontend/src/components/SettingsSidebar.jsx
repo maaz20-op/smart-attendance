@@ -1,7 +1,7 @@
 import React from "react";
-import { User, Sliders, AlertCircle, ScanFace, Heart } from "lucide-react";
+import { User, Sliders, AlertCircle, ScanFace, Heart,LogOut, } from "lucide-react";
 
-export default function SettingsSidebar({ activeTab, setActiveTab }) {
+export default function SettingsSidebar({ activeTab, setActiveTab, onLogout}) {
   const sidebarItems = [
     { name: "General", icon: Sliders },
     { name: "Thresholds", icon: AlertCircle },
@@ -30,6 +30,16 @@ export default function SettingsSidebar({ activeTab, setActiveTab }) {
             {item.name}
           </button>
         ))}
+        
+      </div>
+      <div className="mt-4 border-t border-gray-200 pt-2">
+        <button
+          onClick={onLogout}
+          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-red-600 hover:bg-red-50"
+        >
+          <LogOut size={18} />
+          Logout
+        </button>
       </div>
     </div>
   );

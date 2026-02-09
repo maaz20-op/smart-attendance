@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Info,
   Sliders,
@@ -71,6 +72,14 @@ export default function Settings() {
       .slice(0, 2)
       .join("");
   }
+  const navigate = useNavigate();
+
+  function handleLogout() {
+  localStorage.removeItem("token");
+  localStorage.removeItem("user");
+  navigate("/login");
+  }
+
 
   const [profile, setProfile] = useState({
     name: "",
@@ -251,7 +260,7 @@ export default function Settings() {
         </div>
 
         <div className="flex flex-col md:flex-row gap-8 items-start">
-          <SettingsSidebar activeTab={activeTab} setActiveTab={setActiveTab} />
+          <SettingsSidebar activeTab={activeTab} setActiveTab={setActiveTab } onLogout={handleLogout}/>
 
           <div className="flex-1 bg-white rounded-2xl border border-gray-100 shadow-sm p-8 w-full min-h-[600px]">
             {/* ================= GENERAL TAB ================= */}
