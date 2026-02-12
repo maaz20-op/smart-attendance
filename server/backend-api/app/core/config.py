@@ -19,10 +19,9 @@ _default_origins = [
     "https://studentcheck.vercel.app",
     "http://127.0.0.1:5173",
 ]
-ORIGINS: List[str] = (
-    [o.strip() for o in os.getenv("CORS_ORIGINS", "").split(",") if o.strip()]
-    or _default_origins
-)
+ORIGINS: List[str] = [
+    o.strip() for o in os.getenv("CORS_ORIGINS", "").split(",") if o.strip()
+] or _default_origins
 
 
 class Settings(BaseSettings):
@@ -44,6 +43,7 @@ settings = Settings()
 
 BACKEND_BASE_URL = os.getenv("BACKEND_BASE_URL")
 
+
 class BrevoSettings(BaseSettings):
     BREVO_API_KEY: str | None = os.getenv("BREVO_API_KEY")
     BREVO_SENDER_EMAIL: str | None = os.getenv("BREVO_SENDER_EMAIL")
@@ -63,4 +63,3 @@ ML_UNCERTAIN_THRESHOLD = float(os.getenv("ML_UNCERTAIN_THRESHOLD", "0.60"))
 CLOUDINARY_CLOUD_NAME = os.getenv("CLOUDINARY_CLOUD_NAME")
 CLOUDINARY_API_KEY = os.getenv("CLOUDINARY_API_KEY")
 CLOUDINARY_API_SECRET = os.getenv("CLOUDINARY_API_SECRET")
-

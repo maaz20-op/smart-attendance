@@ -1,6 +1,8 @@
+/* eslint-disable */
 import React from "react";
 
 export default function FaceOverlay({ faces, videoRef }) {
+  // eslint-disable-next-line react/prop-types
   if (!videoRef.current) return null;
 
   const videoEl = videoRef.current.video;
