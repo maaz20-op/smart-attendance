@@ -261,8 +261,6 @@ async def google_callback(request: Request):
         )
 
     if not user.get("is_verified", False):
-        raise HTTPException(
-            status_code=403, detail="Please verify your email before logging in."
         # Auto-verify user if logging in via Google
         await db.users.update_one(
             {"_id": user["_id"]},
