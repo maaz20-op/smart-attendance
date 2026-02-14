@@ -80,11 +80,11 @@ export default function Reports() {
           <p className="text-[var(--text-body)]">Generate and export attendance reports for your classes</p>
         </div>
         <div className="flex items-center gap-3">
-          <button className="px-4 py-2 bg-[var(--action-info-bg)] text-[var(--text-on-primary)] rounded-lg hover:[var(--action-info-hover)] font-medium flex items-center gap-2 shadow-sm transition cursor-pointer">
+          <button className="px-4 py-2 bg-[var(--action-info-bg)] text-[var(--text-on-primary)] rounded-lg hover:bg-[var(--action-info-hover)] font-medium flex items-center gap-2 shadow-sm transition cursor-pointer">
             <FileText size={18} />
             Export CSV
           </button>
-          <button className="px-4 py-2 bg-[var(--action-info-bg)] text-[var(--text-on-primary)] rounded-lg hover:[var(--action-info-hover)] font-medium flex items-center gap-2 shadow-sm transition cursor-pointer">
+          <button className="px-4 py-2 bg-[var(--action-info-bg)] text-[var(--text-on-primary)] rounded-lg hover:bg-[var(--action-info-hover)] font-medium flex items-center gap-2 shadow-sm transition cursor-pointer">
             <Download size={18} />
             Export PDF
           </button>
