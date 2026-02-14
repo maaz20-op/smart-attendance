@@ -3,7 +3,15 @@ import logging
 import httpx
 
 from .config import brevo_settings
-from ..utils.email_template import verification_email_template, otp_email_template
+from ..utils.email_template import (
+    verification_email_template,
+    otp_email_template,
+    absence_notification_template,
+    low_attendance_warning_template,
+    assignment_reminder_template,
+    exam_alert_template,
+    custom_message_template,
+)
 
 logger = logging.getLogger(__name__)
 BREVO_URL = "https://api.brevo.com/v3/smtp/email"
@@ -80,6 +88,119 @@ class BrevoEmailService:
             subject="Verify your email for Smart Attendance",
             html_content=verification_email_template(verification_link, user),
         )
+
+    @staticmethod
+    async def send_absence_notification(
+        to_email: str,
+        student_name: str,
+        subject: str,
+        date: str,
+        teacher_name: str
+    ) -> dict:
+        """Send absence notification to student."""
+        try:
+            await BrevoEmailService._send_email(
+                to_email=to_email,
+                subject=f"Absence Notification - {subject}",
+                html_content=absence_notification_template(
+                    student_name, subject, date, teacher_name
+                ),
+            )
+            return {"status": "sent", "error": None}
+        except Exception as e:
+            logger.error(f"Failed to send absence notification: {e}")
+            return {"status": "failed", "error": str(e)}
+
+    @staticmethod
+    async def send_low_attendance_warning(
+        to_email: str,
+        student_name: str,
+        subject: str,
+        attendance_percentage: float,
+        threshold: int
+    ) -> dict:
+        """Send low attendance warning to student."""
+        try:
+            await BrevoEmailService._send_email(
+                to_email=to_email,
+                subject=f"Low Attendance Warning - {subject}",
+                html_content=low_attendance_warning_template(
+                    student_name, subject, attendance_percentage, threshold
+                ),
+            )
+            return {"status": "sent", "error": None}
+        except Exception as e:
+            logger.error(f"Failed to send low attendance warning: {e}")
+            return {"status": "failed", "error": str(e)}
+
+    @staticmethod
+    async def send_assignment_reminder(
+        to_email: str,
+        student_name: str,
+        assignment_title: str,
+        subject: str,
+        due_date: str,
+        teacher_name: str
+    ) -> dict:
+        """Send assignment reminder to student."""
+        try:
+            await BrevoEmailService._send_email(
+                to_email=to_email,
+                subject=f"Assignment Reminder - {assignment_title}",
+                html_content=assignment_reminder_template(
+                    student_name, assignment_title, subject, due_date, teacher_name
+                ),
+            )
+            return {"status": "sent", "error": None}
+        except Exception as e:
+            logger.error(f"Failed to send assignment reminder: {e}")
+            return {"status": "failed", "error": str(e)}
+
+    @staticmethod
+    async def send_exam_alert(
+        to_email: str,
+        student_name: str,
+        exam_name: str,
+        subject: str,
+        exam_date: str,
+        time: str,
+        venue: str
+    ) -> dict:
+        """Send exam alert to student."""
+        try:
+            await BrevoEmailService._send_email(
+                to_email=to_email,
+                subject=f"Exam Alert - {exam_name}",
+                html_content=exam_alert_template(
+                    student_name, exam_name, subject, exam_date, time, venue
+                ),
+            )
+            return {"status": "sent", "error": None}
+        except Exception as e:
+            logger.error(f"Failed to send exam alert: {e}")
+            return {"status": "failed", "error": str(e)}
+
+    @staticmethod
+    async def send_custom_message(
+        to_email: str,
+        student_name: str,
+        message_title: str,
+        message_body: str,
+        teacher_name: str
+    ) -> dict:
+        """Send custom message from teacher to student."""
+        try:
+            await BrevoEmailService._send_email(
+                to_email=to_email,
+                subject=message_title,
+                html_content=custom_message_template(
+                    student_name, message_title, message_body, teacher_name
+                ),
+            )
+            return {"status": "sent", "error": None}
+        except Exception as e:
+            logger.error(f"Failed to send custom message: {e}")
+            return {"status": "failed", "error": str(e)}
 
 
 # def send_verification_email(to_email: str, verification_link: str):

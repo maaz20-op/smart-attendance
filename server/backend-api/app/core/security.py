@@ -12,6 +12,8 @@ security = HTTPBearer(auto_error=False)
 JWT_SECRET = settings.JWT_SECRET
 JWT_ALGORITHM = settings.JWT_ALGORITHM
 
+# Use argon2 instead of bcrypt to avoid Windows compatibility issues
+pwd_context = CryptContext(schemes=["argon2"], deprecated="auto")
 
 
 def decode_jwt_token(token: str):
@@ -53,20 +55,13 @@ async def get_current_user(
     return {"id": user_id, "role": role, "email": payload.get("email")}
 
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-
-
 def hash_password(password: str) -> str:
     return pwd_context.hash(password)
-    
-    # # bcrypt hard limit — must be enforced here
-    # if len(password.encode("utf-8")) > 72:
-    #     raise ValueError("Password exceeds bcrypt 72-byte limit")
-
-    # return pwd_context.hash(password)
-
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
-    return pwd_context.verify(plain_password, hashed_password)
+    try:
+        return pwd_context.verify(plain_password, hashed_password)
+    except ValueError:
+        return False
 

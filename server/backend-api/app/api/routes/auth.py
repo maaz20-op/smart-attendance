@@ -36,23 +36,8 @@ oauth = OAuth()
 @router.post("/register", response_model=RegisterResponse)
 async def register(payload: RegisterRequest, background_tasks: BackgroundTasks):
 
-    # if len(payload.password.encode("utf-8")) > 72:
-    #     raise HTTPException(
-    #         status_code=400,
-    #         detail="Password too long. Please use at most 72 characters",
-    #     )
-
     # Check existing user
     existing = await db.users.find_one({"email": payload.email})
-
-    # Hash password
-    try:
-        password_hash = hash_password(payload.password)
-    except ValueError:
-        raise HTTPException(
-            status_code=400,
-            detail="Password too long (max 72 bytes)",
-        )
 
     if existing:
         raise HTTPException(status_code=400, detail="Email already registered")
@@ -64,7 +49,7 @@ async def register(payload: RegisterRequest, background_tasks: BackgroundTasks):
     user_doc = {
         "name": payload.name,
         "email": payload.email,
-        "password_hash": password_hash,
+        "password_hash": hash_password(payload.password),
         "role": payload.role,
         "college_name": payload.college_name,
         "is_verified": False,  # Changed to False for email verification flow

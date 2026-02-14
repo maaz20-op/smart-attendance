@@ -395,3 +395,29 @@ async def remove_student(
     await db.students.update_one({"userId": stud_id}, {"$pull": {"subjects": subj_id}})
 
     return {"message": "Student removed from subject"}
+
+
+# ---------------- GET ALL STUDENTS (FOR MESSAGING) ----------------
+@router.get("/teachers/students")
+async def get_all_students(current_user: dict = Depends(get_current_teacher)):
+    """Get all students for messaging purposes"""
+    # Get all students
+    students_cursor = db.students.find({})
+    student_list = []
+    
+    async for student in students_cursor:
+        # Get user data for email and name
+        user = await db.users.find_one({"_id": student.get("userId")})
+        if user:
+            student_list.append({
+                "id": str(student["_id"]),
+                "user_id": str(student.get("userId")),
+                "name": user.get("name", "Unknown"),
+                "email": user.get("email", ""),
+                "usn": user.get("usn", ""),
+                "branch": student.get("branch", ""),
+                "semester": student.get("semester", 0),
+                "verified": student.get("verified", False),
+            })
+    
+    return {"students": student_list}
