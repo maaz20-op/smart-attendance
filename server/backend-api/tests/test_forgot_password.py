@@ -1,7 +1,8 @@
 """
 Unit tests for forgot-password flow (Issue #196, #226).
 
-Covers hashed OTP storage, brute-force limit (5 attempts), generic 400
+Covers hashed OTP storage, brute-force limit 
+(5 attempts), generic 400
 for enumeration protection, and BrevoEmailService usage.
 """
 import pytest
@@ -45,7 +46,8 @@ def test_forgot_password_user_not_found_returns_200(client, mock_deps):
 
 
 def test_forgot_password_user_exists_stores_hashed_otp(client, mock_deps):
-    """When user exists, set reset_otp_hash (hashed), otp_expiry, otp_failed_attempts=0."""
+    """When user exists, set reset_otp_hash (hashed),
+    otp_expiry, otp_failed_attempts=0."""
     mock_db, mock_brevo = mock_deps
     mock_db.users.find_one = AsyncMock(return_value={"_id": "user123", "email": "u@x.com", "name": "User"})
     mock_db.users.update_one = AsyncMock()
@@ -64,7 +66,8 @@ def test_forgot_password_user_exists_stores_hashed_otp(client, mock_deps):
 
 
 def test_verify_otp_user_not_found_400_generic(client, mock_deps):
-    """verify-otp returns 400 'Invalid or expired OTP' for unknown email (no enumeration)."""
+    """verify-otp returns 400 'Invalid or expired OTP'
+    for unknown email (no enumeration)."""
     mock_db, _ = mock_deps
     mock_db.users.find_one = AsyncMock(return_value=None)
 
@@ -78,7 +81,8 @@ def test_verify_otp_user_not_found_400_generic(client, mock_deps):
 
 
 def test_verify_otp_expired_400_generic_and_increments_attempts(client, mock_deps):
-    """verify-otp returns 400 and increments otp_failed_attempts when OTP is expired."""
+    """verify-otp returns 400 and increments otp_failed_attempts 
+    when OTP is expired."""
     mock_db, _ = mock_deps
     past = datetime.now(timezone.utc) - timedelta(minutes=15)
     mock_db.users.find_one = AsyncMock(return_value={
@@ -104,7 +108,8 @@ def test_verify_otp_expired_400_generic_and_increments_attempts(client, mock_dep
 
 
 def test_verify_otp_invalid_otp_400_generic(client, mock_deps):
-    """verify-otp returns 400 'Invalid or expired OTP' when OTP does not match (hashed check)."""
+    """verify-otp returns 400 'Invalid or expired OTP' 
+    when OTP does not match (hashed check)."""
     mock_db, _ = mock_deps
     future = datetime.now(timezone.utc) + timedelta(minutes=5)
     mock_db.users.find_one = AsyncMock(return_value={
@@ -127,7 +132,8 @@ def test_verify_otp_invalid_otp_400_generic(client, mock_deps):
 
 
 def test_verify_otp_success_200(client, mock_deps):
-    """verify-otp returns 200 when OTP is valid (verify_password returns True)."""
+    """verify-otp returns 200 when OTP is valid 
+    (verify_password returns True)."""
     mock_db, _ = mock_deps
     future = datetime.now(timezone.utc) + timedelta(minutes=5)
     mock_db.users.find_one = AsyncMock(return_value={
@@ -149,7 +155,8 @@ def test_verify_otp_success_200(client, mock_deps):
 
 
 def test_verify_otp_five_failures_clears_otp(client, mock_deps):
-    """After 5 failed verify-otp attempts, OTP fields are cleared."""
+    """After 5 failed verify-otp attempts, OTP fields
+    are cleared."""
     mock_db, _ = mock_deps
     future = datetime.now(timezone.utc) + timedelta(minutes=5)
     mock_db.users.find_one = AsyncMock(return_value={
@@ -175,7 +182,8 @@ def test_verify_otp_five_failures_clears_otp(client, mock_deps):
 
 
 def test_reset_password_user_not_found_400_generic(client, mock_deps):
-    """reset-password returns 400 'Invalid or expired OTP' for unknown email."""
+    """reset-password returns 400 'Invalid or expired OTP'
+    for unknown email."""
     mock_db, _ = mock_deps
     mock_db.users.find_one = AsyncMock(return_value=None)
 
@@ -212,7 +220,8 @@ def test_reset_password_invalid_otp_400_generic(client, mock_deps):
 
 
 def test_reset_password_success_200_and_clears_otp(client, mock_deps):
-    """reset-password updates password and unsets all OTP fields."""
+    """reset-password updates password and unsets all OTP 
+    fields."""
     mock_db, _ = mock_deps
     future = datetime.now(timezone.utc) + timedelta(minutes=5)
     mock_db.users.find_one = AsyncMock(return_value={
