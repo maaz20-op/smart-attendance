@@ -3,7 +3,7 @@ import logging
 import httpx
 
 from .config import brevo_settings
-from ..utils.email_template import verification_email_template
+from ..utils.email_template import verification_email_template, otp_email_template
 
 logger = logging.getLogger(__name__)
 BREVO_URL = "https://api.brevo.com/v3/smtp/email"
@@ -11,7 +11,30 @@ BREVO_URL = "https://api.brevo.com/v3/smtp/email"
 
 class BrevoEmailService:
     @staticmethod
-    async def send_verification_email(to_email: str, user: str, verification_link: str):
+    async def send_otp_email(to_email: str, user_name: str, otp: str) -> None:
+        """Send password reset OTP to the user (Issue #196)."""
+        payload = {
+            "sender": {
+                "email": brevo_settings.BREVO_SENDER_EMAIL,
+                "name": brevo_settings.BREVO_SENDER_NAME,
+            },
+            "to": [{"email": to_email}],
+            "subject": "Your password reset code - Smart Attendance",
+            "htmlContent": otp_email_template(otp, user_name),
+        }
+        headers = {
+            "api-key": brevo_settings.BREVO_API_KEY,
+            "content-type": "application/json",
+        }
+        async with httpx.AsyncClient(timeout=20.0) as client:
+            try:
+                response = await client.post(BREVO_URL, json=payload, headers=headers)
+                response.raise_for_status()
+            except httpx.HTTPError as e:
+                logger.warning("Failed to send OTP email: %s", e)
+
+    @staticmethod
+    async def send_verification_email(to_email: str, user: str, verification_link: str) -> None:
         payload = {
             "sender": {
                 "email": brevo_settings.BREVO_SENDER_EMAIL,

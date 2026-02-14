@@ -1,6 +1,25 @@
 import html
 
 
+def otp_email_template(otp: str, user: str) -> str:
+    """HTML body for password reset OTP email."""
+    safe_user = html.escape(user)
+    safe_otp = html.escape(otp)
+    return f"""
+    <html>
+        <body>
+            <p>Hi, {safe_user}</p>
+            <p>You requested a password reset for your Smart Attendance account.</p>
+            <p>Your one-time password (OTP) is: <strong style="font-size: 1.2em; letter-spacing: 2px;">{safe_otp}</strong></p>
+            <p>This OTP expires in 10 minutes. Do not share it with anyone.</p>
+            <br>
+            <p>If you did not request this, please ignore this email.</p>
+            <p>Thanks,<br><b>Smart Attendance Team</b></p>
+        </body>
+    </html>
+    """
+
+
 def verification_email_template(verification_link: str, user: str) -> str:
     safe_user = html.escape(user)
     return f"""

@@ -7,7 +7,18 @@ import os
 from app.utils.jwt_token import create_jwt
 from urllib.parse import quote
 
-from ...schemas.auth import RegisterRequest, UserResponse, LoginRequest, RegisterResponse
+from ...schemas.auth import (
+    RegisterRequest,
+    UserResponse,
+    LoginRequest,
+    RegisterResponse,
+    ForgotPasswordRequest,
+    ForgotPasswordResponse,
+    VerifyOtpRequest,
+    VerifyOtpResponse,
+    ResetPasswordRequest,
+    ResetPasswordResponse,
+)
 from ...core.security import hash_password, verify_password
 
 # from ...core.email import send_verification_email
@@ -176,6 +187,127 @@ async def login(payload: LoginRequest):
         "college_name": user.get("college_name", ""),
         "token": token,
     }
+
+
+# ----- Forgot Password flow (Issue #196, #226) -----
+
+
+def _generate_otp() -> str:
+    """Generate a secure 6-digit numeric OTP."""
+    return f"{secrets.randbelow(10**6):06d}"
+
+
+def _get_otp_expiry() -> datetime:
+    """OTP valid for 10 minutes."""
+    return datetime.now(UTC) + timedelta(minutes=10)
+
+
+def _normalize_expiry(dt: datetime | None) -> datetime | None:
+    """Ensure expiry datetime is timezone-aware for comparison."""
+    if dt is None:
+        return None
+    if dt.tzinfo is None:
+        return dt.replace(tzinfo=timezone.utc)
+    return dt
+
+
+@router.post("/forgot-password", response_model=ForgotPasswordResponse)
+async def forgot_password(
+    payload: ForgotPasswordRequest,
+    background_tasks: BackgroundTasks,
+) -> dict:
+    """
+    Request a password reset. Sends a 6-digit OTP to the user's email.
+    Returns the same message whether the user exists or not (avoids enumeration).
+    """
+    user = await db.users.find_one({"email": payload.email})
+    if not user:
+        # Same response to avoid email enumeration
+        return ForgotPasswordResponse()
+
+    otp = _generate_otp()
+    otp_expiry = _get_otp_expiry()
+
+    await db.users.update_one(
+        {"_id": user["_id"]},
+        {
+            "$set": {
+                "reset_otp": otp,
+                "otp_expiry": otp_expiry,
+            }
+        },
+    )
+
+    background_tasks.add_task(
+        BrevoEmailService.send_otp_email,
+        payload.email,
+        user.get("name", "User"),
+        otp,
+    )
+
+    logger.info("Password reset OTP sent for email: %s", payload.email)
+    return ForgotPasswordResponse()
+
+
+@router.post("/verify-otp", response_model=VerifyOtpResponse)
+async def verify_otp(payload: VerifyOtpRequest) -> dict:
+    """
+    Verify the OTP sent to the user's email.
+    Returns clear errors: User not found, Invalid OTP, OTP expired (Issue #226).
+    """
+    user = await db.users.find_one({"email": payload.email})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    stored_otp = user.get("reset_otp")
+    expiry = _normalize_expiry(user.get("otp_expiry"))
+
+    if expiry is None or expiry < datetime.now(UTC):
+        raise HTTPException(status_code=400, detail="OTP expired")
+
+    if not stored_otp or str(stored_otp) != str(payload.otp):
+        raise HTTPException(status_code=400, detail="Invalid OTP")
+
+    return VerifyOtpResponse()
+
+
+@router.post("/reset-password", response_model=ResetPasswordResponse)
+async def reset_password(payload: ResetPasswordRequest) -> dict:
+    """
+    Set new password after OTP verification.
+    Validates OTP again, then updates password and clears reset_otp / otp_expiry.
+    """
+    user = await db.users.find_one({"email": payload.email})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    stored_otp = user.get("reset_otp")
+    expiry = _normalize_expiry(user.get("otp_expiry"))
+
+    if expiry is None or expiry < datetime.now(UTC):
+        raise HTTPException(status_code=400, detail="OTP expired")
+
+    if not stored_otp or str(stored_otp) != str(payload.otp):
+        raise HTTPException(status_code=400, detail="Invalid OTP")
+
+    if len(payload.new_password.encode("utf-8")) > 72:
+        raise HTTPException(
+            status_code=400,
+            detail="Password too long. Please use at most 72 characters",
+        )
+
+    new_hash = hash_password(payload.new_password)
+
+    await db.users.update_one(
+        {"_id": user["_id"]},
+        {
+            "$set": {"password_hash": new_hash},
+            "$unset": {"reset_otp": 1, "otp_expiry": 1},
+        },
+    )
+
+    logger.info("Password reset completed for email: %s", payload.email)
+    return ResetPasswordResponse()
 
 
 # Verify email route
