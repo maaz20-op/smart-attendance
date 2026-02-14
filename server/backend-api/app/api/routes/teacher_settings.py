@@ -216,7 +216,7 @@ async def replace_settings(user_id_str: str, payload: dict) -> dict:
     the UI). Returns the fresh teacher+user profile.
     """
     user_id = validate_object_id(user_id_str)
-    now = datetime.utcnow()
+    now = datetime.now(UTC)
 
     teacher_updates = {}
 
@@ -401,17 +401,25 @@ async def remove_student(
 @router.get("/teachers/students")
 async def get_all_students(current_user: dict = Depends(get_current_teacher)):
     """Get all students for messaging purposes"""
-    # Get all students
-    students_cursor = db.students.find({})
-    student_list = []
+    # Get all students (with limit to avoid memory issues)
+    students = await db.students.find({}).to_list(length=None)
     
-    async for student in students_cursor:
-        # Get user data for email and name
-        user = await db.users.find_one({"_id": student.get("userId")})
+    if not students:
+        return {"students": []}
+    
+    # Batch fetch all user data
+    user_ids = [s.get("userId") for s in students if s.get("userId")]
+    users_cursor = db.users.find({"_id": {"$in": user_ids}})
+    users_map = {str(u["_id"]): u async for u in users_cursor}
+    
+    student_list = []
+    for student in students:
+        uid = str(student.get("userId"))
+        user = users_map.get(uid)
         if user:
             student_list.append({
                 "id": str(student["_id"]),
-                "user_id": str(student.get("userId")),
+                "user_id": uid,
                 "name": user.get("name", "Unknown"),
                 "email": user.get("email", ""),
                 "usn": user.get("usn", ""),

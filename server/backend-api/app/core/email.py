@@ -35,7 +35,8 @@ class BrevoEmailService:
             subject: Email subject line.
             html_content: HTML body of the email.
 
-        Logs a warning on HTTP or network errors; does not raise.
+        Raises:
+            httpx.HTTPError: If the request fails or returns non-2xx status.
         """
         payload = {
             "sender": {
@@ -51,11 +52,8 @@ class BrevoEmailService:
             "content-type": "application/json",
         }
         async with httpx.AsyncClient(timeout=20.0) as client:
-            try:
-                response = await client.post(BREVO_URL, json=payload, headers=headers)
-                response.raise_for_status()
-            except httpx.HTTPError as e:
-                logger.warning("Failed to send email: %s", e)
+            response = await client.post(BREVO_URL, json=payload, headers=headers)
+            response.raise_for_status()
 
     @staticmethod
     async def send_otp_email(to_email: str, user_name: str, otp: str) -> None:
@@ -66,12 +64,19 @@ class BrevoEmailService:
             to_email: Recipient email address.
             user_name: Display name used in the email body.
             otp: The 6-digit OTP to include in the email.
+            
+        Raises:
+            Exception: If email sending fails.
         """
-        await BrevoEmailService._send_email(
-            to_email=to_email,
-            subject="Your password reset code - Smart Attendance",
-            html_content=otp_email_template(otp, user_name),
-        )
+        try:
+            await BrevoEmailService._send_email(
+                to_email=to_email,
+                subject="Your password reset code - Smart Attendance",
+                html_content=otp_email_template(otp, user_name),
+            )
+        except Exception as e:
+            logger.error(f"Failed to send OTP email to {to_email}: {e}")
+            raise
 
     @staticmethod
     async def send_verification_email(to_email: str, user: str, verification_link: str) -> None:
@@ -82,12 +87,19 @@ class BrevoEmailService:
             to_email: Recipient email address.
             user: Display name used in the email body.
             verification_link: Full URL the user must visit to verify.
+            
+        Raises:
+            Exception: If email sending fails.
         """
-        await BrevoEmailService._send_email(
-            to_email=to_email,
-            subject="Verify your email for Smart Attendance",
-            html_content=verification_email_template(verification_link, user),
-        )
+        try:
+            await BrevoEmailService._send_email(
+                to_email=to_email,
+                subject="Verify your email for Smart Attendance",
+                html_content=verification_email_template(verification_link, user),
+            )
+        except Exception as e:
+            logger.error(f"Failed to send verification email to {to_email}: {e}")
+            raise
 
     @staticmethod
     async def send_absence_notification(

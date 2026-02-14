@@ -2,7 +2,7 @@
 API routes for email notifications.
 """
 
-from fastapi import APIRouter, HTTPException, Depends, BackgroundTasks
+from fastapi import APIRouter, HTTPException, Depends, Query
 from typing import Dict
 import logging
 
@@ -26,7 +26,6 @@ router = APIRouter(prefix="/notifications", tags=["Notifications"])
 @router.post("/absence", response_model=BulkEmailResponse)
 async def send_absence_notifications(
     payload: SendAbsenceNotificationRequest,
-    background_tasks: BackgroundTasks,
     current_user: dict = Depends(get_current_user),
 ):
     """
@@ -40,7 +39,7 @@ async def send_absence_notifications(
     teacher_id = str(current_user["id"])
     teacher_name = payload.teacher_name or current_user.get("name", "Your Teacher")
 
-    # Send notifications in background
+    # Send notifications
     result = await NotificationService.send_absence_notifications(
         student_emails=payload.student_emails,
         subject=payload.subject,
@@ -55,7 +54,6 @@ async def send_absence_notifications(
 @router.post("/low-attendance", response_model=BulkEmailResponse)
 async def send_low_attendance_warnings(
     warnings: list[SendLowAttendanceWarningRequest],
-    background_tasks: BackgroundTasks,
     current_user: dict = Depends(get_current_user),
 ):
     """
@@ -80,7 +78,7 @@ async def send_low_attendance_warnings(
         for w in warnings
     ]
 
-    # Send warnings in background
+    # Send warnings
     result = await NotificationService.send_low_attendance_warnings(
         warnings=warnings_data,
         teacher_id=teacher_id
@@ -92,7 +90,6 @@ async def send_low_attendance_warnings(
 @router.post("/assignment", response_model=BulkEmailResponse)
 async def send_assignment_reminders(
     payload: SendAssignmentReminderRequest,
-    background_tasks: BackgroundTasks,
     current_user: dict = Depends(get_current_user),
 ):
     """
@@ -106,7 +103,7 @@ async def send_assignment_reminders(
     teacher_id = str(current_user["id"])
     teacher_name = payload.teacher_name or current_user.get("name", "Your Teacher")
 
-    # Send reminders in background
+    # Send reminders
     result = await NotificationService.send_assignment_reminders(
         student_emails=payload.student_emails,
         assignment_title=payload.assignment_title,
@@ -122,7 +119,6 @@ async def send_assignment_reminders(
 @router.post("/exam", response_model=BulkEmailResponse)
 async def send_exam_alerts(
     payload: SendExamAlertRequest,
-    background_tasks: BackgroundTasks,
     current_user: dict = Depends(get_current_user),
 ):
     """
@@ -135,7 +131,7 @@ async def send_exam_alerts(
 
     teacher_id = str(current_user["id"])
 
-    # Send alerts in background
+    # Send alerts
     result = await NotificationService.send_exam_alerts(
         student_emails=payload.student_emails,
         exam_name=payload.exam_name,
@@ -152,7 +148,6 @@ async def send_exam_alerts(
 @router.post("/custom", response_model=BulkEmailResponse)
 async def send_custom_message(
     payload: SendCustomMessageRequest,
-    background_tasks: BackgroundTasks,
     current_user: dict = Depends(get_current_user),
 ):
     """
@@ -166,7 +161,7 @@ async def send_custom_message(
     teacher_id = str(current_user["id"])
     teacher_name = payload.teacher_name or current_user.get("name", "Your Teacher")
 
-    # Send messages in background
+    # Send messages
     result = await NotificationService.send_custom_messages(
         student_emails=payload.student_emails,
         message_title=payload.message_title,
@@ -180,7 +175,7 @@ async def send_custom_message(
 
 @router.get("/stats", response_model=EmailStatsResponse)
 async def get_email_statistics(
-    days: int = 30,
+    days: int = Query(default=30, ge=1, le=365),
     current_user: dict = Depends(get_current_user),
 ):
     """

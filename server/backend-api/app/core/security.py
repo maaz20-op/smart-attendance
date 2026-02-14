@@ -12,8 +12,10 @@ security = HTTPBearer(auto_error=False)
 JWT_SECRET = settings.JWT_SECRET
 JWT_ALGORITHM = settings.JWT_ALGORITHM
 
-# Use argon2 instead of bcrypt to avoid Windows compatibility issues
-pwd_context = CryptContext(schemes=["argon2"], deprecated="auto")
+# Argon2 is the primary scheme; keep bcrypt as deprecated so existing
+# hashes can still be verified (passlib will transparently rehash on
+# next successful login when using .verify_and_update()).
+pwd_context = CryptContext(schemes=["argon2", "bcrypt"], deprecated=["bcrypt"])
 
 
 def decode_jwt_token(token: str):

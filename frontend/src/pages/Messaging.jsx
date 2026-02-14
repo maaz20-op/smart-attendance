@@ -656,7 +656,7 @@ export default function Messaging() {
                       {Object.entries(stats.sent_by_type).map(([type, counts]) => (
                         <div key={type} className="flex justify-between items-center text-sm">
                           <span className="text-gray-600 capitalize">
-                            {type.replace("_", " ")}
+                            {type.replaceAll("_", " ")}
                           </span>
                           <span className="text-gray-900">{counts.sent}</span>
                         </div>

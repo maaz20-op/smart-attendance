@@ -3,7 +3,7 @@ Notification service for sending and logging emails.
 """
 
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import List, Dict
 from bson import ObjectId
 
@@ -52,7 +52,7 @@ class NotificationService:
             "status": status,
             "error_message": error_message,
             "sent_by": ObjectId(sent_by),
-            "sent_at": datetime.utcnow(),
+            "sent_at": datetime.now(timezone.utc),
             "metadata": metadata or {}
         }
 
@@ -80,6 +80,17 @@ class NotificationService:
                     "status": "failed",
                     "error": "Student not found"
                 })
+                # Log the failure
+                await NotificationService.log_email(
+                    notification_type="absence",
+                    recipient_email=email,
+                    recipient_name="Unknown",
+                    subject=f"Absence Notification - {subject}",
+                    status="failed",
+                    sent_by=teacher_id,
+                    error_message="Student not found",
+                    metadata={"subject": subject, "date": date}
+                )
                 continue
 
             student_name = student.get("name", "Student")
@@ -193,6 +204,21 @@ class NotificationService:
                     "status": "failed",
                     "error": "Student not found"
                 })
+                # Log the failure
+                await NotificationService.log_email(
+                    notification_type="assignment",
+                    recipient_email=email,
+                    recipient_name="Unknown",
+                    subject=f"Assignment Reminder - {assignment_title}",
+                    status="failed",
+                    sent_by=teacher_id,
+                    error_message="Student not found",
+                    metadata={
+                        "assignment_title": assignment_title,
+                        "subject": subject,
+                        "due_date": due_date
+                    }
+                )
                 continue
 
             student_name = student.get("name", "Student")
@@ -259,6 +285,23 @@ class NotificationService:
                     "status": "failed",
                     "error": "Student not found"
                 })
+                # Log the failure
+                await NotificationService.log_email(
+                    notification_type="exam",
+                    recipient_email=email,
+                    recipient_name="Unknown",
+                    subject=f"Exam Alert - {exam_name}",
+                    status="failed",
+                    sent_by=teacher_id,
+                    error_message="Student not found",
+                    metadata={
+                        "exam_name": exam_name,
+                        "subject": subject,
+                        "exam_date": exam_date,
+                        "time": time,
+                        "venue": venue
+                    }
+                )
                 continue
 
             student_name = student.get("name", "Student")
@@ -326,6 +369,20 @@ class NotificationService:
                     "status": "failed",
                     "error": "Student not found"
                 })
+                # Log the failure
+                await NotificationService.log_email(
+                    notification_type="custom",
+                    recipient_email=email,
+                    recipient_name="Unknown",
+                    subject=message_title,
+                    status="failed",
+                    sent_by=teacher_id,
+                    error_message="Student not found",
+                    metadata={
+                        "message_title": message_title,
+                        "message_body": message_body[:200]  # Truncate for storage
+                    }
+                )
                 continue
 
             student_name = student.get("name", "Student")
@@ -367,7 +424,7 @@ class NotificationService:
     @staticmethod
     async def get_email_stats(teacher_id: str, days: int = 30) -> Dict:
         """Get email statistics for a teacher."""
-        since_date = datetime.utcnow() - timedelta(days=days)
+        since_date = datetime.now(timezone.utc) - timedelta(days=days)
 
         # Aggregate statistics
         pipeline = [
@@ -446,7 +503,7 @@ class NotificationService:
         Returns:
             True if duplicate found, False otherwise
         """
-        since_time = datetime.utcnow() - timedelta(hours=within_hours)
+        since_time = datetime.now(timezone.utc) - timedelta(hours=within_hours)
 
         recent_send = await db.email_logs.find_one({
             "sent_by": ObjectId(teacher_id),

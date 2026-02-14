@@ -2,7 +2,7 @@
 Schemas for email notifications system.
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import List, Optional, Literal
 from pydantic import BaseModel, EmailStr, Field
 
@@ -67,7 +67,7 @@ class EmailLogEntry(BaseModel):
     status: Literal["sent", "failed"]
     error_message: Optional[str] = None
     sent_by: str  # Teacher ID
-    sent_at: datetime = Field(default_factory=datetime.utcnow)
+    sent_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     metadata: Optional[dict] = None
 
 
