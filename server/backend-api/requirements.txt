@@ -46,6 +46,8 @@ sentry-sdk[fastapi]>=1.40.6
 prometheus-client>=0.20.0
 prometheus-fastapi-instrumentator>=6.1.0
 psutil>=5.9.8
+redis[hiredis]
+
 
 # =========================
 # Testing (safe in prod)
