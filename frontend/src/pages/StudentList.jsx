@@ -146,26 +146,26 @@ export default function StudentList() {
         <div className="xl:col-span-3 space-y-4">
           
           {/* Filters Bar */}
-          <div className="bg-[var(--bg-card)] p-4 rounded-xl border border-[var(--border-color)] shadow-sm flex flex-col md:flex-row gap-4 justify-between items-center">
+          <div className="bg-[var(--bg-card)] p-4 rounded-xl border border-[color:var(--border-color)] shadow-sm">
             
             {/* Search */}
-            <div className="relative w-full md:w-64">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-body)] opacity-70" size={18} />
+            <div className="relative w-full mb-3">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[color:var(--text-body)]" size={18} />
               <input 
                 type="text" 
                 placeholder={t('students.search_placeholder')}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 bg-[var(--bg-secondary)] border-none rounded-lg text-sm focus:ring-2 focus:ring-[var(--primary)] outline-none"
+                className="w-full pl-10 pr-4 py-2 bg-[color:var(--bg-secondary)] border-none rounded-lg text-sm focus:ring-2 focus:ring-[color:var(--primary)] outline-none"
               />
             </div>
 
             {/* Filter Controls */}
-            <div className="flex items-center gap-2 overflow-x-auto w-full md:w-auto pb-2 md:pb-0">
+            <div className="flex flex-wrap items-center gap-2">
               <select
                 value={selectedSubject || ""}
                 onChange={(e) => setSelectedSubject(e.target.value)}
-                className="flex items-center gap-1 text-sm font-medium text-[var(--text-body)] px-3 py-1.5 hover:bg-[var(--bg-hover)] rounded-lg whitespace-nowrap cursor-pointer"
+                className="flex items-center gap-1 text-sm font-medium text-[color:var(--text-body)] px-3 py-1.5 hover:bg-[color:var(--bg-secondary)] rounded-lg cursor-pointer"
               >
                 <option value="">{t('students.select_subject')}</option>
                 {subjects.map(s => (
@@ -177,33 +177,52 @@ export default function StudentList() {
 
               <button 
                 onClick={handleSortToggle}
-                className="flex items-center gap-1 text-sm font-medium text-[var(--text-body)] px-3 py-1.5 hover:bg-[var(--bg-hover)] rounded-lg whitespace-nowrap cursor-pointer"
+                className="flex items-center gap-1 text-sm font-medium text-[color:var(--text-body)] px-3 py-1.5 hover:bg-[color:var(--bg-secondary)] rounded-lg cursor-pointer"
+                title="Sort by attendance"
               >
-                {t('students.sort_by_attendance')} 
+                <span className="hidden sm:inline">{t('students.sort_by_attendance')}</span>
+                <span className="sm:hidden">{t('common.sort', 'Sort')}</span>
                 <ChevronDown 
                   size={14} 
                   className={`transition-transform ${sortOrder === "asc" ? "rotate-180" : ""}`} 
                 />
               </button>
               
-              <div className="h-6 w-px bg-[var(--border-color)] mx-1"></div>
+              <div className="hidden sm:block h-6 w-px bg-[color:var(--border-color)] mx-1"></div>
 
-              {["All", "High (> 90%)", "Medium (75-90%)", "Low (< 75%)"].map((filter) => (
-                <button 
-                  key={filter}
-                  onClick={() => setSelectedFilter(filter)}
-                  className={`px-3 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap transition ${
-                    selectedFilter === filter
+              {["All", "High (> 90%)", "Medium (75-90%)", "Low (< 75%)"].map((filter) => {
+                const getLabel = () => {
+                   if (filter === "All") return t('students.filters.all');
+                   if (filter.includes("High")) return t('students.filters.high');
+                   if (filter.includes("Medium")) return t('students.filters.medium');
+                   if (filter.includes("Low")) return t('students.filters.low');
+                   return filter;
+                };
+
+                const getShortLabel = () => {
+                   const label = getLabel();
+                   // Heuristic: take first word if manageable or specific logic
+                   if (label.includes("High")) return "High"; // Fallback specific logic 
+                   if (label.includes("Medium")) return "Med";
+                   return label.split(' ')[0];
+                };
+
+                return (
+                  <button 
+                    key={filter}
+                    onClick={() => setSelectedFilter(filter)}
+                    className={`px-3 py-1.5 rounded-lg text-sm font-medium transition ${
+                      selectedFilter === filter 
                       ? "bg-[var(--primary)]/10 text-[var(--primary)]"
                       : "text-[var(--text-body)] hover:bg-[var(--bg-hover)]"
-                  }`}
-                >
-                  {filter === "All" ? t('students.filters.all') : 
-                   filter.includes("High") ? t('students.filters.high') :
-                   filter.includes("Medium") ? t('students.filters.medium') :
-                   filter.includes("Low") ? t('students.filters.low') : filter}
-                </button>
-              ))}
+                    }`}
+                    title={getLabel()}
+                  >
+                    <span className="hidden sm:inline">{getLabel()}</span>
+                    <span className="sm:hidden">{getShortLabel()}</span>
+                  </button>
+                );
+              })}
             </div>
           </div>
 
