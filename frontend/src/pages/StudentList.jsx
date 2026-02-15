@@ -202,7 +202,7 @@ export default function StudentList() {
                     onClick={() => setSelectedFilter(filter)}
                     className={`px-3 py-1.5 rounded-lg text-sm font-medium transition ${
                       selectedFilter === filter 
-                        ? "bg-indigo-100 text-indigo-700" 
+                        ? "bg-[var(--primary)]/10 text-[var(--primary)]" 
                         : "text-gray-500 hover:bg-gray-50"
                     }`}
                     title={filter}
