@@ -18,7 +18,6 @@ export default function MarkWithQR() {
     const [showScanner, setShowScanner] = useState(false);
     const [status, setStatus] = useState("idle"); // idle, scanning, geolocating, submitting, success, error
     const [errorMsg, setErrorMsg] = useState("");
-    const [scannedData, setScannedData] = useState(null);
 
     const startScanning = () => {
         setShowScanner(true);
@@ -28,7 +27,6 @@ export default function MarkWithQR() {
 
     const handleScanSuccess = async (decodedText) => {
         setShowScanner(false);
-        setScannedData(decodedText);
         setStatus("geolocating");
 
         // Step 2: Capture Geolocation
@@ -67,7 +65,7 @@ export default function MarkWithQR() {
     const submitAttendance = async (token, lat, lng) => {
         setStatus("submitting");
         try {
-            const response = await api.post("/api/attendance/mark-qr", {
+            await api.post("/api/attendance/mark-qr", {
                 token,
                 latitude: lat,
                 longitude: lng,

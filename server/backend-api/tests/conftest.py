@@ -20,9 +20,9 @@ async def db_client():
     except Exception:
         client.close()
         pytest.skip("MongoDB not available - skipping integration tests")
-    
+
     yield client
-    
+
     # Close client after test
     client.close()
 
