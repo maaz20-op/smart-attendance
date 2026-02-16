@@ -21,6 +21,7 @@ import {
 import { useTranslation } from "react-i18next";
 import { fetchSubjectAnalytics } from "../api/analytics";
 import { fetchMySubjects } from "../api/teacher";
+import Spinner from "../components/Spinner";
 
 // --- Mock Data ---
 
@@ -122,30 +123,53 @@ export default function Analytics() {
   const isGlobal = selectedSubject === 'all';
 
   useEffect(() => {
-    if (isGlobal) {
-      setStats(GLOBAL_STATS);
-      setBestPerforming(GLOBAL_LEADERBOARD_BEST);
-      setNeedingSupport(GLOBAL_LEADERBOARD_RISK);
-    } else {
-      setLoading(true);
-      fetchSubjectAnalytics(selectedSubject)
-        .then(data => {
-          setStats({
-            attendance: data.attendance || 0,
-            avgLate: data.avgLate || 0,
-            riskCount: data.riskCount || 0,
-            lateTime: data.lateTime || "N/A"
-          });
-          setBestPerforming(data.bestPerforming || []);
-          setNeedingSupport(data.needingSupport || []);
-        })
-        .catch(err => {
-          console.error("Failed to fetch analytics:", err);
-          // Fallback or error indication?
-        })
-        .finally(() => setLoading(false));
-    }
+    let isMounted = true;
+
+    const loadAnalytics = async () => {
+      if (isGlobal) {
+        // Avoid synchronous state updates in effect
+        await Promise.resolve();
+        if (isMounted) {
+            setStats(GLOBAL_STATS);
+            setBestPerforming(GLOBAL_LEADERBOARD_BEST);
+            setNeedingSupport(GLOBAL_LEADERBOARD_RISK);
+        }
+      } else {
+        setLoading(true);
+        try {
+          const data = await fetchSubjectAnalytics(selectedSubject);
+            if (isMounted) {
+              setStats({
+                attendance: data.attendance || 0,
+                avgLate: data.avgLate || 0,
+                riskCount: data.riskCount || 0,
+                lateTime: data.lateTime || "N/A"
+              });
+              setBestPerforming(data.bestPerforming || []);
+              setNeedingSupport(data.needsSupport || []);
+            }
+        } catch (err) {
+            if (isMounted) {
+                 console.error("Failed to fetch analytics:", err);
+            }
+        } finally {
+            if(isMounted) setLoading(false);
+        }
+      }
+    };
+
+    loadAnalytics();
+
+    return () => { isMounted = false; };
   }, [selectedSubject, isGlobal]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[var(--bg-primary)]">
+        <Spinner />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[var(--bg-primary)] p-6 md:p-8">

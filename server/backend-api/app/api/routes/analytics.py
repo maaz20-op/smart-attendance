@@ -55,7 +55,7 @@ async def get_subject_analytics(
             riskCount=0,
             lateTime="09:00 AM",
             bestPerforming=[],
-            needsSupport=[]
+            needsSupport=[],
         )
 
     # Fetch Student Names
@@ -64,7 +64,7 @@ async def get_subject_analytics(
     users_list = []
     async for u in users_cursor:
         users_list.append(u)
-    
+
     users_map = {str(u["_id"]): u.get("name", "Unknown") for u in users_list}
 
     stats_list = []
@@ -78,7 +78,7 @@ async def get_subject_analytics(
         present = attendance.get("present", 0)
         absent = attendance.get("absent", 0)
         total = present + absent
-        
+
         if total == 0:
             percentage = 0.0
         else:
@@ -87,14 +87,14 @@ async def get_subject_analytics(
         current_student_stat = StudentStat(
             id=sid_str,
             name=users_map.get(sid_str, "Unknown"),
-            score=round(percentage, 1)
+            score=round(percentage, 1),
         )
         stats_list.append(current_student_stat)
 
         if total > 0:
             total_percentage += percentage
             valid_students_count += 1
-            
+
         if percentage < 75.0:
             risk_count += 1
 
@@ -107,8 +107,8 @@ async def get_subject_analytics(
     # Sort for Leaderboards
     # Best: High score desc
     best_performing = sorted(stats_list, key=lambda x: x.score, reverse=True)[:5]
-    
-    # Needs Support: Low score asc but only those < 75% maybe? 
+
+    # Needs Support: Low score asc but only those < 75% maybe?
     # Or just lowest performers regardless of threshold for the list
     needs_support = sorted(stats_list, key=lambda x: x.score)[:5]
 
@@ -118,8 +118,9 @@ async def get_subject_analytics(
         riskCount=risk_count,
         lateTime="09:00 AM",  # Placeholder
         bestPerforming=best_performing,
-        needsSupport=needs_support
+        needsSupport=needs_support,
     )
+
 
 @router.get("/attendance-trend")
 async def get_attendance_trend(
@@ -486,7 +487,6 @@ async def get_global_stats(
     #         total_percentage += 0.0
     #         # risk_count += 1  # 0% < 75%
 
-    
     # Re-sort by attendancePercentage descending
     subject_stats.sort(key=lambda x: x["attendancePercentage"], reverse=True)
 
