@@ -57,14 +57,16 @@ async def get_full_schedule(current_user: dict = Depends(get_current_user)):
         if not student:
             raise HTTPException(status_code=404, detail="Student profile not found")
 
-        if student.get("branch"):
-            query["branch"] = student["branch"]
-        if student.get("semester"):
-            query["semester"] = student["semester"]
-            
-        if not student.get("branch"):
-             return []
+        branch = student.get("branch")
+        semester = student.get("semester")
 
+        # Require both branch and semester for student schedule queries to avoid
+        # returning schedules for all semesters within a branch.
+        if not branch or not semester:
+            return []
+
+        query["branch"] = branch
+        query["semester"] = semester
     else:
         raise HTTPException(status_code=403, detail="Role not authorized")
 
