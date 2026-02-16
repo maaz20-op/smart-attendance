@@ -52,6 +52,7 @@ async def save_daily_summary(
             "updatedAt": datetime.now(UTC),
         },
         "$setOnInsert": {
+            "subjectId": subject_id,
             "createdAt": datetime.now(UTC),
         },
     }
