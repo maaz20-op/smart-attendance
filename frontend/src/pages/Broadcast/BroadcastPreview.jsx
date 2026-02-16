@@ -1,38 +1,42 @@
 import React from "react";
-import { Megaphone } from "lucide-react";
+import PropTypes from "prop-types";
 
 export default function BroadcastPreview({ title, message }) {
-  if (!title && !message) {
-    return (
-      <div className="bg-[var(--bg-card)] border border-[var(--border-color)] rounded-xl p-6 shadow-sm h-full flex flex-col items-center justify-center text-center opacity-60">
-        <Megaphone size={48} className="text-[var(--text-body)] mb-4 opacity-20" />
-        <p className="text-[var(--text-body)] text-sm">Preview will appear here</p>
-      </div>
-    );
-  }
-
   return (
-    <div className="bg-[var(--bg-card)] border border-[var(--border-color)] rounded-xl p-6 shadow-sm h-full">
-      <h3 className="text-lg font-bold text-[var(--text-main)] mb-4 border-b border-[var(--border-color)] pb-2 flex items-center gap-2">
-        <Megaphone size={20} className="text-[var(--primary)]" />
-        Preview
-      </h3>
-
-      <div className="space-y-4">
-        <div>
-          <label className="text-xs font-semibold text-[var(--text-body)] uppercase tracking-wide">Title</label>
-          <div className="font-semibold text-[var(--text-main)] text-xl mt-1 break-words">
-            {title || <span className="text-[var(--text-body)] italic opacity-50">No title...</span>}
-          </div>
+    <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm max-w-sm mx-auto">
+      <div className="flex items-start gap-3">
+        <div className="bg-blue-100 p-2 rounded-lg text-blue-600">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="24"
+            height="24"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="lucide lucide-bell"
+          >
+            <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
+            <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
+          </svg>
         </div>
-
         <div>
-          <label className="text-xs font-semibold text-[var(--text-body)] uppercase tracking-wide">Message</label>
-          <div className="text-[var(--text-body)] whitespace-pre-wrap mt-1 break-words leading-relaxed">
-            {message || <span className="italic opacity-50">No content...</span>}
-          </div>
+          <h3 className="font-bold text-gray-900">
+            {title || "Broadcast Title"}
+          </h3>
+          <p className="text-sm text-gray-600 mt-1">
+            {message || "This is a preview of the broadcast message."}
+          </p>
+          <span className="text-xs text-gray-400 mt-2 block">Just now</span>
         </div>
       </div>
     </div>
   );
 }
+
+BroadcastPreview.propTypes = {
+  title: PropTypes.string,
+  message: PropTypes.string,
+};
