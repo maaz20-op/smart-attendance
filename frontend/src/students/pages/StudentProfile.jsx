@@ -18,7 +18,7 @@ import {
 } from "lucide-react";
 import StudentNavigation from "../components/StudentNavigation"
 import ProfileSkeleton from "../components/ProfileSkeleton";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { uploadFaceImage } from "../../api/students"
 import { useTranslation } from "react-i18next";
 import SubjectAttendanceCard from "../../components/SubjectAttendanceCard";
