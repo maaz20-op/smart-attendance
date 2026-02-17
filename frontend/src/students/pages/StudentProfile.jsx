@@ -189,7 +189,7 @@ export default function StudentProfile() {
                     </div>
                     <div className="flex items-center gap-1">
                       <span className="text-[var(--text-body)]/80">{t('profile.branch')}:</span>
-                      <span className="font-medium text-[var(--text-main)]">{(data.branch || "N/A").toUpperCase()}</span>
+                      <span className="font-medium text-[var(--text-main)]">{(data?.branch ?? "N/A").toUpperCase()}</span>
                     </div>
                     <div className="flex items-center gap-1">
                       <span className="text-[var(--text-body)]/80">{t('profile.email')}:</span>
