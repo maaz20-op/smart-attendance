@@ -108,8 +108,8 @@
     /* Action colors */
   --success: #16a34a;       /* green-600 */
   --warning: #d97706;       /* amber-600 */
-  --action-info-bg: #047857;     /* reuse existing hover (darker) */
-  --action-info-hover: #059669;  /* optional: keep hover lighter */
+  --action-info-bg: #059669;     /* base action info background (lighter) */
+  --action-info-hover: #047857;  /* darker hover state for action info */
 
 
   --overlay: rgba(20, 83, 45, 0.4);
