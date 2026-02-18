@@ -1,7 +1,7 @@
-import api from "./axios";
+import api from "./axiosClient";
 
 /**
- * Fetch all holidays for the current teacher.
+ * Fetch all holidays for the authenticated teacher.
  * @returns {Promise<{holidays: Array}>}
  */
 export const getHolidays = async () => {
@@ -20,8 +20,8 @@ export const addHoliday = async (data) => {
 };
 
 /**
- * Delete a holiday by its ID.
- * @param {string} id
+ * Delete a holiday by ID.
+ * @param {string} id - The holiday's MongoDB _id
  * @returns {Promise<{message: string}>}
  */
 export const deleteHoliday = async (id) => {

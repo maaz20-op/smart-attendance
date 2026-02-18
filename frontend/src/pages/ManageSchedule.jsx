@@ -1,4 +1,4 @@
-import React, { useState, useEffect ,useRef} from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import {
   Plus,
@@ -581,8 +581,9 @@ export default function ManageSchedule() {
             </div>
           </div>
 
-          {/* RIGHT SECTION: CALENDAR OVERVIEW*/}
+          {/* RIGHT SECTION: CALENDAR OVERVIEW */}
           <div className="xl:col-span-4 space-y-6">
+            {/* Calendar Card */}
             <div className="bg-[var(--bg-card)] p-6 rounded-2xl border border-[var(--border-color)] shadow-sm">
               <div className="mb-6">
                 <h3 className="text-lg font-bold text-[var(--text-main)]">
@@ -692,7 +693,7 @@ export default function ManageSchedule() {
               </div>
             </div>
 
-            {/* Holidays (replaced Recurring Timetable) */}
+            {/* Holidays Card — SIBLING of calendar, NOT nested */}
             <div
               onClick={() => setHolidaysModalOpen(true)}
               className="bg-[var(--bg-card)] p-4 rounded-xl border border-[var(--border-color)] flex items-center justify-between cursor-pointer hover:bg-[var(--bg-secondary)] transition"
@@ -701,58 +702,58 @@ export default function ManageSchedule() {
                 <h4 className="font-bold text-[var(--text-main)] text-sm">
                   {t('manage_schedule.holidays_title', "Holidays")}
                 </h4>
-                  <p className="text-xs text-[var(--text-body)] mt-0.5">
-                    {t('manage_schedule.holidays_desc', "Manage non-instructional days")}
-                  </p>
-                </div>
-                <CalendarDays size={18} className="text-[var(--text-body)]" />
+                <p className="text-xs text-[var(--text-body)] mt-0.5">
+                  {t('manage_schedule.holidays_desc', "Manage non-instructional days")}
+                </p>
               </div>
+              <CalendarDays size={18} className="text-[var(--text-body)]" />
+            </div>
 
-              {/* Holidays Modal — fully self-contained, persists directly to holidays collection */}
-              <HolidaysModal
-                isOpen={holidaysModalOpen}
-                onClose={() => setHolidaysModalOpen(false)}
-              />
-
-              {/* Exam Days */}
-              <div className="bg-[var(--bg-card)] p-4 rounded-xl border border-[var(--border-color)] flex items-center justify-between cursor-pointer hover:bg-[var(--bg-secondary)] transition">
-                <div>
-                  <h4 className="font-bold text-[var(--text-main)] text-sm">
-                    {t('manage_schedule.exam_days', "Exam days")}
-                  </h4>
-                  <p className="text-xs text-[var(--text-body)] mt-0.5">
-                    {t('manage_schedule.exam_desc', "Override schedule for exams")}
-                  </p>
-                </div>
-                <CalendarIcon size={18} className="text-[var(--text-body)]" />
+            {/* Exam Days Card — SIBLING of holidays card */}
+            <div className="bg-[var(--bg-card)] p-4 rounded-xl border border-[var(--border-color)] flex items-center justify-between cursor-pointer hover:bg-[var(--bg-secondary)] transition">
+              <div>
+                <h4 className="font-bold text-[var(--text-main)] text-sm">
+                  {t('manage_schedule.exam_days', "Exam days")}
+                </h4>
+                <p className="text-xs text-[var(--text-body)] mt-0.5">
+                  {t('manage_schedule.exam_desc', "Override schedule for exams")}
+                </p>
               </div>
+              <CalendarIcon size={18} className="text-[var(--text-body)]" />
+            </div>
 
-              {/* Custom Templates */}
-              <div
-                onClick={() => setShowTemplates(true)}
-                className="bg-[var(--bg-card)] p-4 rounded-xl border border-[var(--border-color)] flex items-center justify-between cursor-pointer hover:bg-[var(--bg-secondary)] transition"
-              >
-                <div>
-                  <h4 className="font-bold text-[var(--text-main)] text-sm">
-                    {t('manage_schedule.custom_templates', "Custom templates")}
-                  </h4>
-                  <p className="text-xs text-[var(--text-body)] mt-0.5">
-                    {t('manage_schedule.templates_desc', "Save and reuse schedule presets")}
-                  </p>
-                </div>
-                <Folder size={18} className="text-[var(--text-body)]" />
+            {/* Custom Templates Card — SIBLING */}
+            <div
+              onClick={() => setShowTemplates(true)}
+              className="bg-[var(--bg-card)] p-4 rounded-xl border border-[var(--border-color)] flex items-center justify-between cursor-pointer hover:bg-[var(--bg-secondary)] transition"
+            >
+              <div>
+                <h4 className="font-bold text-[var(--text-main)] text-sm">
+                  {t('manage_schedule.custom_templates', "Custom templates")}
+                </h4>
+                <p className="text-xs text-[var(--text-body)] mt-0.5">
+                  {t('manage_schedule.templates_desc', "Save and reuse schedule presets")}
+                </p>
               </div>
+              <Folder size={18} className="text-[var(--text-body)]" />
             </div>
           </div>
+        </div>
 
-          {/* Templates Modal */}
-          {showTemplates && (
-            <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-              <div className="bg-[var(--bg-card)] w-full max-w-lg rounded-2xl p-6 shadow-xl border border-[var(--border-color)]">
-                <div className="flex justify-between items-center mb-6">
-                  <h3 className="font-bold text-lg text-[var(--text-main)]">
-                    {t('manage_schedule.custom_templates', "Custom Templates")}
-                  </h3>
+        {/* Holidays Modal — rendered at page root level, outside all cards */}
+        <HolidaysModal
+          isOpen={holidaysModalOpen}
+          onClose={() => setHolidaysModalOpen(false)}
+        />
+
+        {/* Templates Modal */}
+        {showTemplates && (
+          <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+            <div className="bg-[var(--bg-card)] w-full max-w-lg rounded-2xl p-6 shadow-xl border border-[var(--border-color)]">
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="font-bold text-lg text-[var(--text-main)]">
+                  {t('manage_schedule.custom_templates', "Custom Templates")}
+                </h3>
                 <button
                   onClick={() => setShowTemplates(false)}
                   className="text-[var(--text-body)] hover:text-[var(--text-main)]"
@@ -811,7 +812,6 @@ export default function ManageSchedule() {
                     ))}
                   </div>
                 )}
-
 
                 <button
                   className="w-full bg-[var(--primary)] text-[var(--text-on-primary)] py-3 rounded-lg font-medium hover:opacity-90 transition shadow-md flex items-center justify-center gap-2"
