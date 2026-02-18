@@ -189,7 +189,7 @@ async def mark_attendance(request: Request, payload: Dict):
                 status_code=403,
                 detail="New device detected. Please verify with OTP sent to your email.",
             )
-    except ObjectId as e:
+    except bson_errors.InvalidId:
         raise HTTPException(status_code=400, detail="Invalid user ID")
 
     image_b64 = payload.get("image")
