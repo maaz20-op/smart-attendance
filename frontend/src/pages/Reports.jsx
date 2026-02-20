@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from "react";
-import { 
-  Download, 
-  FileText, 
-  Calendar, 
-  ChevronDown, 
-  RotateCcw, 
+import {
+  Download,
+  FileText,
+  Calendar,
+  ChevronDown,
+  RotateCcw,
   Search,
   Filter
 } from "lucide-react";
@@ -18,6 +18,8 @@ export default function Reports() {
   const [subjects, setSubjects] = useState([]);
   const [selectedSubject, setSelectedSubject] = useState(null);
   const [students, setStudents] = useState([]);
+  const [startDate, setStartDate] = useState(null);
+  const [endDate, setEndDate] = useState(null);
 
   // const [selectedFilter, setSelectedFilter] = useState("All");
 
@@ -27,7 +29,7 @@ export default function Reports() {
   }, []);
 
   useEffect(() => {
-    if(!selectedSubject) return;
+    if (!selectedSubject) return;
     fetchSubjectStudents(selectedSubject).then(setStudents);
   }, [selectedSubject])
 
@@ -52,9 +54,9 @@ export default function Reports() {
     const percentage = total === 0 ? 0 : Math.round((present / total) * 100);
 
     const status = percentage >= threshold ? "OK" : "At Risk";
-    const color = percentage >= threshold 
-        ? "green"
-        : percentage >= threshold - 10
+    const color = percentage >= threshold
+      ? "green"
+      : percentage >= threshold - 10
         ? "amber"
         : "red";
 
@@ -66,7 +68,16 @@ export default function Reports() {
       color
     };
   });
+  const filteredStudents = enhancedStudents.filter((s) => {
+    if (!startDate || !endDate) return true;
 
+    const studentDate = new Date(s.createdAt || Date.now());
+
+    return (
+      studentDate >= new Date(startDate) &&
+      studentDate <= new Date(endDate)
+    );
+  });
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
@@ -105,7 +116,10 @@ export default function Reports() {
         <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-end">
 
           <DateRange
-            onChange={(date) => setStartDate(date)}
+            onChange={({ start, end }) => {
+              setStartDate(start);
+              setEndDate(end);
+            }}
           />
 
           {/* Classes Selector */}
@@ -149,7 +163,7 @@ export default function Reports() {
                   className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                 />
               </div>
-              <button onClick={()=> setThreshold(75)} className="text-sm text-gray-400 hover:text-[var(--primary)] flex items-center gap-1 transition cursor-pointer">
+              <button onClick={() => setThreshold(75)} className="text-sm text-gray-400 hover:text-[var(--primary)] flex items-center gap-1 transition cursor-pointer">
                 <RotateCcw size={14} />
                 Reset
               </button>
@@ -182,7 +196,7 @@ export default function Reports() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
-              {enhancedStudents.map((row) => (
+              {filteredStudents.map((row) => (
                 <tr key={row.id} className="hover:bg-gray-50 transition-colors">
                   <td className="px-6 py-4">
                     <div>
