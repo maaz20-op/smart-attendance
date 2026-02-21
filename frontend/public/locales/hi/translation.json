@@ -738,21 +738,6 @@
       "venue": "स्थान",
       "message_title": "संदेश शीर्षक",
       "message": "संदेश",
-      "placeholders": {
-        "subject_class": "उदा., गणित 101",
-        "assignment_title": "उदा., अध्याय 5 होमवर्क",
-        "subject": "उदा., गणित",
-        "exam_name": "उदा., मध्यावधि परीक्षा",
-        "venue": "उदा., कमरा 101, मुख्य भवन",
-        "message_title": "उदा., महत्वपूर्ण घोषणा",
-        "message": "यहाँ अपना संदेश लिखें..."
-      },
-      "buttons": {
-        "send_absence": "अनुपस्थिति सूचना भेजें",
-        "send_assignment": "असाइनमेंट रिमाइंडर भेजें",
-        "send_exam": "परीक्षा अलर्ट भेजें",
-        "send_custom": "कस्टम संदेश भेजें"
-      },
       "message_body": "संदेश निकाय",
       "send_absence": "अनुपस्थिति सूचना भेजें",
       "send_assignment": "असाइनमेंट रिमाइंडर भेजें",
