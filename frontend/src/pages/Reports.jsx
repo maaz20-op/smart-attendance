@@ -53,7 +53,19 @@ export default function Reports() {
   }, [selectedSubject, startDate]);
 
   const verifiedStudents = students.filter((s) => s.verified === true);
-
+  
+const getStatusColor = (color) => {
+  switch (color) {
+    case "green":
+      return "bg-[var(--success)]/10 text-[var(--success)] border border-[var(--success)]/25";
+    case "amber":
+      return "bg-[var(--warning)]/10 text-[var(--warning)] border border-[var(--warning)]/25";
+    case "red":
+      return "bg-[var(--danger)]/10 text-[var(--danger)] border border-[var(--danger)]/25";
+    default:
+      return "bg-[var(--bg-secondary)] text-[var(--text-body)] border border-[var(--border-color)]";
+  }
+};
   const enhancedStudents = verifiedStudents.map(s => {
     const present = s.attendance?.present || 0;
     const absent = s.attendance?.absent || 0;
