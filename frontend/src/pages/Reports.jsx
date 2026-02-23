@@ -21,8 +21,7 @@ import { toast } from "react-hot-toast";
 //import { fetchStudentById } from "../api/teacher";
 
 export default function Reports() {
-  const { t: _t } = useTranslation();
-
+  const { t } = useTranslation();
 
   const [subjects, setSubjects] = useState([]);
   const [selectedSubject, setSelectedSubject] = useState(null);
@@ -151,7 +150,7 @@ const goToPage = (page) => {
 
   const handleExport = async (format) => {
     if (!selectedSubject) {
-      toast.error("Select subject first");
+     toast.error(t('reports.select_subject_first'));
       return;
     }
 
@@ -175,7 +174,7 @@ const goToPage = (page) => {
 
       // ✅ check response
       if (!res.ok) {
-        throw new Error("Download failed");
+       throw new Error(t('reports.download_failed'));
       }
 
       const blob = await res.blob();
@@ -191,10 +190,10 @@ const goToPage = (page) => {
 
       // ✅ cleanup memory
       window.URL.revokeObjectURL(url);
-
-      toast.success(`${format.toUpperCase()} downloaded`);
+toast.success(t('reports.download_success', { format: format.toUpperCase() }));
+    
     } catch (err) {
-      toast.error("Export failed");
+toast.error(t('reports.export_failed'));
     } finally {
       setLoadingFormat(null);
     }
