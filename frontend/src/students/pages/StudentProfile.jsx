@@ -1,6 +1,7 @@
 import React, { useState, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { fetchMyStudentProfile } from "../../api/auth.js";
+import LogoutConfirmDialog from "../../components/LogoutConfirmDialog.jsx";
 import {
   fetchAvailableSubjects,
   addSubjectToStudent,
@@ -15,6 +16,7 @@ import {
   CheckCircle,
   Camera,
   Edit2,
+  LogOut
 } from "lucide-react";
 import StudentNavigation from "../components/StudentNavigation";
 import ProfileSkeleton from "../components/ProfileSkeleton";
@@ -29,6 +31,7 @@ export default function StudentProfile() {
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const { theme, setTheme } = useTheme();
+  const [isLogoutOpen, setLogoutOpen] = useState(false);
 
   const changeLanguage = (lng) => {
     i18n.changeLanguage(lng);
@@ -81,9 +84,9 @@ export default function StudentProfile() {
 
   // Calculate data outside of conditional rendering
   const img = data?.image_url;
-  const subjectsData = mySubjects || [];
-  const totalPresent = subjectsData.reduce((acc, sub) => acc + (sub.attended || 0), 0);
-  const totalClasses = subjectsData.reduce((acc, sub) => acc + (sub.total || 0), 0);
+  const subjectsData =  [];
+  const totalPresent = 50 // subjectsData.reduce((acc, sub) => acc + (sub.attended || 0), 0);
+  const totalClasses = 5//subjectsData.reduce((acc, sub) => acc + (sub.total || 0), 0);
   const overallPercentage = totalClasses > 0 ? (totalPresent / totalClasses) * 100 : 0;
   const isOverallOnTrack = overallPercentage >= 75;
 
@@ -472,6 +475,27 @@ export default function StudentProfile() {
               </div>
             )}
 
+            { /* Logout Button for devices less than 760px (Mobile) */ }
+      <div className="block pb-4 md:hidden lg:hidden xl:hidden">
+         <div 
+         className="flex  justify-center gap-2 items-center px-13 py-1 rounded-2x"
+          onClick={()=> setLogoutOpen(true)}
+         >
+            <span className="text-red-500">Logout</span>
+                <LogOut 
+                   className="cursor-pointer text-[var(--text-body)] hover:text-[var(--danger)] transition-colors" color="red" size={24}
+                 />
+                <LogoutConfirmDialog 
+                   isOpen={isLogoutOpen}
+                   onClose={() => setLogoutOpen(false)}
+                   onConfirm={()=> {
+                   localStorage.setItem("user", null);
+                   navigate("/");
+                 }}
+                />
+               </div>
+             </div>
+             
           </div>
         )}
       </main>
