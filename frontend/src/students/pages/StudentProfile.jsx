@@ -489,7 +489,8 @@ export default function StudentProfile() {
                    isOpen={isLogoutOpen}
                    onClose={() => setLogoutOpen(false)}
                    onConfirm={()=> {
-                   localStorage.setItem("user", null);
+                   localStorage.removeItem("user");
+                   localStorage.removeItem("token"); /*  ----- Removing token to ensure that api not calls after user logout ----- */
                    navigate("/");
                  }}
                 />
