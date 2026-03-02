@@ -1,6 +1,18 @@
 import '@testing-library/jest-dom';
 import { cleanup } from '@testing-library/react';
-import { afterEach, vi } from 'vitest';
+import { afterEach, vi, beforeAll, afterAll } from 'vitest';
+import { setupServer } from 'msw/node';
+import { handlers } from './mocks/handlers';
+
+const server = setupServer(...handlers);
+
+beforeAll(() => server.listen());
+afterEach(() => {
+    server.resetHandlers();
+    cleanup();
+});
+afterAll(() => server.close());
+
 
 vi.mock('react-i18next', () => {
     // Define translations inside the factory so they are available

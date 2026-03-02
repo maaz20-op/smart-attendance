@@ -1,0 +1,78 @@
+import pytest
+from httpx import AsyncClient
+
+@pytest.mark.asyncio
+async def test_register_user(client: AsyncClient, db):
+    payload = {
+        "email": "newuser@example.com",
+        "password": "strongpassword123",
+        "name": "New User",
+        "role": "teacher",
+        "college_name": "Test College", 
+        "employee_id": "EMP123",
+        "phone": "9876543210",
+        "branch": "CSE"
+    }
+    response = await client.post("/auth/register", json=payload)
+    assert response.status_code == 201
+    data = response.json()
+    assert data["email"] == payload["email"]
+    assert "id" in data
+
+    # Verify in DB
+    user = await db.users.find_one({"email": payload["email"]})
+    assert user is not None
+    assert user["is_verified"] is False  # Should be false initially
+
+@pytest.mark.asyncio
+async def test_login_user(client: AsyncClient, db):
+    # Setup: Create and verify a user
+    email = "login_test@example.com"
+    password = "password123"
+    
+    # Manually insert verified user to skip email verification flow in test
+    from app.core.security import get_password_hash
+    await db.users.insert_one({
+        "email": email,
+        "hashed_password": get_password_hash(password),
+        "name": "Login Test",
+        "role": "teacher",
+        "is_verified": True,
+        "is_active": True,
+        "created_at": None,
+        "college_name": "Test College"
+    })
+
+    # Test Login
+    response = await client.post("/auth/login", data={
+        "username": email,  # OAuth2 password request form uses 'username' for email
+        "password": password
+    })
+    
+    # If using JSON body login
+    if response.status_code == 422:
+         response = await client.post("/auth/login", json={
+            "email": email,
+            "password": password
+        })
+
+    assert response.status_code == 200
+    data = response.json()
+    assert "access_token" in data or "token" in data
+    assert data["token_type"] == "bearer"
+
+@pytest.mark.asyncio
+async def test_duplicate_registration(client: AsyncClient, db):
+    payload = {
+        "email": "duplicate@example.com",
+        "password": "password",
+        "name": "Dup User",
+        "role": "student"
+    }
+    # First registration
+    await client.post("/auth/register", json=payload)
+    
+    # Second registration
+    response = await client.post("/auth/register", json=payload)
+    assert response.status_code == 400
+    assert "already registered" in response.json()["detail"].lower()
