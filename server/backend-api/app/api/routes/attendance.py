@@ -6,6 +6,7 @@ from typing import Dict
 from bson import ObjectId
 from bson import errors as bson_errors
 from fastapi import APIRouter, HTTPException, Request
+from pymongo import UpdateOne
 
 from geopy.distance import geodesic
 from app.core.config import ML_CONFIDENT_THRESHOLD, ML_UNCERTAIN_THRESHOLD
@@ -665,7 +666,29 @@ async def confirm_attendance(payload: AttendanceConfirm):
     present_students = payload.present_students or []
     absent_students = payload.absent_students or []
     selected_date = payload.date
-    subject_oid = ObjectId(subject_id)
+
+    try:
+        subject_oid = ObjectId(subject_id)
+    except (bson_errors.InvalidId, TypeError):
+        raise HTTPException(status_code=400, detail="Invalid subject_id")
+
+    present_oids = []
+    for sid in present_students:
+        try:
+            present_oids.append(ObjectId(sid))
+        except (bson_errors.InvalidId, TypeError):
+            raise HTTPException(
+                status_code=400, detail=f"Invalid ObjectId in present_students: {sid}"
+            )
+
+    absent_oids = []
+    for sid in absent_students:
+        try:
+            absent_oids.append(ObjectId(sid))
+        except (bson_errors.InvalidId, TypeError):
+            raise HTTPException(
+                status_code=400, detail=f"Invalid ObjectId in absent_students: {sid}"
+            )
 
     present_set = set(present_students)
     absent_set = set(absent_students)
@@ -684,14 +707,15 @@ async def confirm_attendance(payload: AttendanceConfirm):
 
     att_date = selected_date.isoformat() if selected_date else date.today().isoformat()
     today = att_date
-    present_oids = [ObjectId(sid) for sid in present_students]
-    absent_oids = [ObjectId(sid) for sid in absent_students]
 
     # Mark PRESENT students
     await db.subjects.update_one(
         {"_id": subject_oid},
         {
-            "$inc": {"students.$[p].attendance.present": 1},
+            "$inc": {
+                "students.$[p].attendance.present": 1,
+                "students.$[p].attendance.total": 1,
+            },
             "$set": {"students.$[p].attendance.lastMarkedAt": att_date},
         },
         array_filters=[
@@ -706,7 +730,10 @@ async def confirm_attendance(payload: AttendanceConfirm):
     await db.subjects.update_one(
         {"_id": subject_oid},
         {
-            "$inc": {"students.$[a].attendance.absent": 1},
+            "$inc": {
+                "students.$[a].attendance.absent": 1,
+                "students.$[a].attendance.total": 1,
+            },
             "$set": {"students.$[a].attendance.lastMarkedAt": att_date},
         },
         array_filters=[
@@ -716,6 +743,38 @@ async def confirm_attendance(payload: AttendanceConfirm):
             }
         ],
     )
+
+    # Recalculate percentages for updated students
+    all_updated_oids = set(present_oids) | set(absent_oids)
+    if all_updated_oids:
+        # Refetch to get updated totals
+        updated_subj = await db.subjects.find_one(
+            {"_id": subject_oid}, {"students": 1}
+        )
+        if updated_subj and "students" in updated_subj:
+            bulk_ops = []
+            for s in updated_subj["students"]:
+                if s["student_id"] in all_updated_oids:
+                    att = s.get("attendance", {})
+                    total = att.get("total", 0)
+                    present = att.get("present", 0)
+                    percentage = (present / total * 100) if total > 0 else 0.0
+
+                    bulk_ops.append(
+                        UpdateOne(
+                            {
+                                "_id": subject_oid,
+                                "students.student_id": s["student_id"],
+                            },
+                            {
+                                "$set": {
+                                    "students.$.attendance.percentage": percentage,
+                                }
+                            },
+                        )
+                    )
+            if bulk_ops:
+                await db.subjects.bulk_write(bulk_ops)
 
     # --- Write daily attendance summary ---
     teacher_id = (
