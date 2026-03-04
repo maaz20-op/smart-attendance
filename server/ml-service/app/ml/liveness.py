@@ -3,12 +3,13 @@ import cv2
 import numpy as np
 import mediapipe as mp
 import logging
+from app.core.config import settings
 
 # Configure logger
 logger = logging.getLogger(__name__)
 
 # Liveness Configuration
-ML_LIVENESS_CHECK = os.getenv("ML_LIVENESS_CHECK", "true").lower() == "true"
+ML_LIVENESS_CHECK = settings.ML_LIVENESS_CHECK
 # Adjusted Defaults for Real-World Webcam Usage
 LIVENESS_BLUR_THRESHOLD = int(os.getenv("LIVENESS_BLUR_THRESHOLD", "10")) # Lowered to catch only severe flat colors
 LIVENESS_BLUR_MAX_THRESHOLD = int(os.getenv("LIVENESS_BLUR_MAX_THRESHOLD", "800")) # Reject high-freq noise (screen moiré)
