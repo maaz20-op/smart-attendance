@@ -1,5 +1,4 @@
 import pytest
-import sys
 from unittest.mock import patch, MagicMock
 try:
     from unittest.mock import AsyncMock

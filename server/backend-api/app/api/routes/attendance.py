@@ -97,9 +97,9 @@ def _parse_object_id_list(
 
 @router.post("/mark-qr")
 async def mark_attendance_qr(
-    payload: QRAttendanceRequest, 
+    payload: QRAttendanceRequest,
     request: Request,
-    current_user: dict = Depends(get_current_user)
+    current_user: dict = Depends(get_current_user),
 ):
     """
     Mark attendance via QR code with geofencing check and date validation.
@@ -122,9 +122,9 @@ async def mark_attendance_qr(
         user_id = ObjectId(current_user["id"])
         user_doc = await db.users.find_one({"_id": user_id})
         if not user_doc:
-             raise HTTPException(status_code=404, detail="Student not found")
+            raise HTTPException(status_code=404, detail="Student not found")
     except Exception:
-         raise HTTPException(status_code=400, detail="Invalid user ID")
+        raise HTTPException(status_code=400, detail="Invalid user ID")
 
     # -------------------------------------------------------------------------
     # WebAuthn Verification
@@ -133,12 +133,19 @@ async def mark_attendance_qr(
         origin = request.headers.get("origin")
         rp_id = get_rp_id(origin)
         try:
-           credential_model = parse_authentication_credential_json(payload.webauthn_credential)
-           # Pass the full user_doc, which has _id and webauthn_credentials
-           await verify_auth_response(user_doc, credential_model, origin, rp_id)
+            credential_model = parse_authentication_credential_json(
+                payload.webauthn_credential
+            )
+            # Pass the full user_doc, which has _id and webauthn_credentials
+            await verify_auth_response(user_doc, credential_model, origin, rp_id)
         except Exception as e:
-           raise HTTPException(status_code=400, detail=f"Biometric verification failed: {str(e)}")
-    elif user_doc.get("webauthn_credentials") and len(user_doc["webauthn_credentials"]) > 0:
+            raise HTTPException(
+                status_code=400, detail=f"Biometric verification failed: {str(e)}"
+            )
+    elif (
+        user_doc.get("webauthn_credentials")
+        and len(user_doc["webauthn_credentials"]) > 0
+    ):
         # If user has registered biometrics, they MUST use them.
         raise HTTPException(status_code=400, detail="Biometric authentication required")
 
@@ -376,11 +383,11 @@ async def mark_attendance(request: Request, payload: Dict):
         decoded = decode_jwt(token)
         user_id = decoded.get("user_id")
         user_role = decoded.get("role")
-        
+
         if not user_id:
             logger.error("Token missing user_id")
             raise ValueError("user_id is required")
-            
+
     except Exception as e:
         logger.error(f"Authentication failed: {str(e)}")
         raise HTTPException(status_code=401, detail="Invalid token")
@@ -655,10 +662,13 @@ async def confirm_attendance(payload: AttendanceConfirm):
       after deduplication (not the count of DB rows modified).
     """
     subject_id = payload.subject_id
-    present_students = payload.present_students
-    absent_students = payload.absent_students
+    present_students = payload.present_students or []
+    absent_students = payload.absent_students or []
     selected_date = payload.date
+    subject_oid = ObjectId(subject_id)
 
+    present_set = set(present_students)
+    absent_set = set(absent_students)
     overlap = present_set.intersection(absent_set)
     if overlap:
         raise HTTPException(
@@ -666,12 +676,14 @@ async def confirm_attendance(payload: AttendanceConfirm):
             detail="Students cannot be both present and absent",
         )
 
-    subject = await db.subjects.find_one({"_id": subject_oid}, {"professor_ids": 1})
+    subject = await db.subjects.find_one(
+        {"_id": subject_oid}, {"professor_ids": 1, "students": 1}
+    )
     if not subject:
         raise HTTPException(status_code=404, detail="Subject not found")
 
     att_date = selected_date.isoformat() if selected_date else date.today().isoformat()
-    subject_oid = ObjectId(subject_id)
+    today = att_date
     present_oids = [ObjectId(sid) for sid in present_students]
     absent_oids = [ObjectId(sid) for sid in absent_students]
 
@@ -717,81 +729,45 @@ async def confirm_attendance(payload: AttendanceConfirm):
     updated_logs_doc = None
     if present_oids:
         from datetime import datetime, UTC
-        
+
         current_time_iso = datetime.now(UTC).isoformat()
-        
+
         log_students = []
         for pid in present_oids:
-            log_students.append({
-                "studentId": pid,
-                "scanTime": current_time_iso,
-                "method": "Manual_or_Offline_Sync",
-                "isProxy": False
-            })
-            
+            log_students.append(
+                {
+                    "studentId": pid,
+                    "scanTime": current_time_iso,
+                    "method": "Manual_or_Offline_Sync",
+                    "isProxy": False,
+                }
+            )
+
         updated_logs_doc = await log_grouped_attendance(
             subject_id=subject_oid,
             date_str=today,
             teacher_id=teacher_id,
-            students=log_students
+            students=log_students,
         )
-    
+
     # Calculate daily totals from the logs if available, otherwise just use curr batch
     # To be accurate for multiple batches (offline syncs)
-    
+
     total_present_today = len(present_set)
-    
+
     # If we have logs, we can get the true count of present students for the day
     if updated_logs_doc and "students" in updated_logs_doc:
-         unique_present = set(str(s["studentId"]) for s in updated_logs_doc["students"])
-         total_present_today = len(unique_present)
+        unique_present = set(str(s["studentId"]) for s in updated_logs_doc["students"])
+        total_present_today = len(unique_present)
     else:
-         # Try fetch if logs exist but weren't updated in this call (e.g. only absent students sent)
-         existing_logs = await db.attendance_logs.find_one({"subjectId": subject_oid, "date": today})
-         if existing_logs and "students" in existing_logs:
-             unique_present = set(str(s["studentId"]) for s in existing_logs["students"])
-             total_present_today = len(unique_present)
+        # Try fetch if logs exist but weren't updated in this call (e.g. only absent students sent)
+        existing_logs = await db.attendance_logs.find_one(
+            {"subjectId": subject_oid, "date": today}
+        )
+        if existing_logs and "students" in existing_logs:
+            unique_present = set(str(s["studentId"]) for s in existing_logs["students"])
+            total_present_today = len(unique_present)
 
-    await save_daily_summary(
-        subject_id=subject_oid,
-        teacher_id=teacher_id,
-        record_date=today,
-        present=total_present_today,
-        absent=len(absent_set),
-    )
-
-    return {
-        "ok": True,
-        "present_updated": len(present_set),
-        "absent_updated": len(absent_set),
-    }
-    # ideally rely on the cumulative logs for 'present'.
-    # For 'absent', since we don't log them in 'attendance_logs',
-    # we might need to rely on accumulation or just overwrite?
-    # The current 'save_daily_summary' overwrites.
-    # If we want to support incremental updates properly,
-    # 'save_daily_summary' should use $inc or we must read-modify-write.
-    
-    total_present_today = len(present_set)
-    if updated_logs_doc and "students" in updated_logs_doc:
-         # Count unique student IDs in logs to get total present for the day
-         unique_present = set(str(s["studentId"]) for s in updated_logs_doc["students"])
-         total_present_today = len(unique_present)
-    elif not updated_logs_doc:
-         # If no present students in this batch, check if there are existing logs
-         existing_logs = await db.attendance_logs.find_one({"subjectId": subject_oid, "date": today})
-         if existing_logs and "students" in existing_logs:
-             unique_present = set(str(s["studentId"]) for s in existing_logs["students"])
-             total_present_today = len(unique_present)
-
-    # For absent, it's harder because we don't log them.
-    # For now, we will use the batch count, but this is flawed for multiple batches.
-    # However, 'absent' is usually calculated as Total - Present.
-    # Let's assume the teacher confirms ONCE or in one session.
-    # The offline sync might break this assumption for 'absent'.
-    # But usually offline sync confirms *Present* scans.
-    # 'Absent' handling might need a different approach or just stick to batch for now.
-    
     # Correctly calculate absent students based on total enrollment
     # This fixes the issue where offline partial syncs overwrite 'absent' with 0
     total_enrolled = len(subject.get("students", []))
@@ -800,10 +776,16 @@ async def confirm_attendance(payload: AttendanceConfirm):
     await save_daily_summary(
         subject_id=subject_oid,
         teacher_id=teacher_id,
-        record_date=att_date,
-        present=len(present_students),
-        absent=len(absent_students),
+        record_date=today,
+        present=total_present_today,
+        absent=absent_count,
     )
+
+    return {
+        "ok": True,
+        "present_updated": len(present_set),
+        "absent_updated": len(absent_set),
+    }
 
     return {
         "ok": True,
