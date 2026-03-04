@@ -1,9 +1,16 @@
 import pytest
 from httpx import AsyncClient
+from unittest.mock import patch, AsyncMock
+
+
+@pytest.fixture
+def mock_email():
+    with patch("app.core.email.BrevoEmailService._send_email", new_callable=AsyncMock) as mock:
+        yield mock
 
 
 @pytest.mark.asyncio
-async def test_register_user(client: AsyncClient, db):
+async def test_register_user(client: AsyncClient, db, mock_email):
     payload = {
         "email": "newuser@example.com",
         "password": "strongpassword123",
@@ -14,7 +21,9 @@ async def test_register_user(client: AsyncClient, db):
         "phone": "9876543210",
         "branch": "CSE",
     }
+    # with patch("app.core.email.BrevoEmailService._send_email", new_callable=AsyncMock) as mock_email:
     response = await client.post("/auth/register", json=payload)
+        
     assert response.status_code == 200
     data = response.json()
     assert data["email"] == payload["email"]
@@ -32,12 +41,12 @@ async def test_login_user(client: AsyncClient, db):
     password = "password123"
 
     # Manually insert verified user to skip email verification flow in test
-    from app.core.security import get_password_hash
+    from app.core.security import hash_password
 
     await db.users.insert_one(
         {
             "email": email,
-            "password_hash": get_password_hash(password),
+            "password_hash": hash_password(password),
             "name": "Login Test",
             "role": "teacher",
             "is_verified": True,
@@ -64,24 +73,27 @@ async def test_login_user(client: AsyncClient, db):
 
     assert response.status_code == 200
     data = response.json()
-    assert "access_token" in data or "token" in data
-    assert data["token_type"] == "bearer"
+    # UserResponse returns "token", not "access_token"
     assert "token" in data
     assert "refresh_token" in data
+    # assert data["token_type"] == "bearer"  # Not in UserResponse model
 
 
 @pytest.mark.asyncio
-async def test_duplicate_registration(client: AsyncClient, db):
+async def test_duplicate_registration(client: AsyncClient, db, mock_email):
     payload = {
         "email": "duplicate@example.com",
         "password": "password",
         "name": "Dup User",
         "role": "student",
+        "college_name": "Test College",  # Required field
     }
     # First registration
     await client.post("/auth/register", json=payload)
 
     # Second registration
     response = await client.post("/auth/register", json=payload)
+    if response.status_code == 422:
+         pytest.fail(f"Got 422 Validation Error: {response.json()}")
     assert response.status_code == 400
     assert "already registered" in response.json()["detail"].lower()

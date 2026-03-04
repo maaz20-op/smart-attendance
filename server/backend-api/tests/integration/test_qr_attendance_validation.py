@@ -18,7 +18,7 @@ async def test_mark_qr_attendance_invalid_subject_id_returns_400(
     headers = student_token_header(student_id)
 
     response = await client.post(
-        "/api/attendance/mark-qr",
+        "/attendance/mark-qr",
         headers=headers,
         json={
             "subjectId": "not-an-object-id",
@@ -44,7 +44,7 @@ async def test_mark_qr_attendance_expired_date_returns_400(
     yesterday = datetime.now(timezone.utc) - timedelta(days=1)
 
     response = await client.post(
-        "/api/attendance/mark-qr",
+        "/attendance/mark-qr",
         headers=headers,
         json={
             "subjectId": str(ObjectId()),
@@ -69,7 +69,7 @@ async def test_mark_qr_attendance_nonexistent_subject_returns_404(
     headers = student_token_header(student_id)
 
     response = await client.post(
-        "/api/attendance/mark-qr",
+        "/attendance/mark-qr",
         headers=headers,
         json={
             "subjectId": str(ObjectId()),
@@ -94,7 +94,7 @@ async def test_mark_qr_attendance_missing_fields_returns_422(
     headers = student_token_header(student_id)
 
     response = await client.post(
-        "/api/attendance/mark-qr",
+        "/attendance/mark-qr",
         headers=headers,
         json={
             "subjectId": str(ObjectId()),
@@ -116,7 +116,7 @@ async def test_mark_qr_attendance_invalid_date_format_returns_400(
     headers = student_token_header(student_id)
 
     response = await client.post(
-        "/api/attendance/mark-qr",
+        "/attendance/mark-qr",
         headers=headers,
         json={
             "subjectId": str(ObjectId()),

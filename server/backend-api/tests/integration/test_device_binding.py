@@ -23,8 +23,8 @@ async def test_teacher_exempt_from_device_binding(client: AsyncClient, db):
 
     Scenario:
     1. Register and login as a teacher
-    2. Call /api/attendance/mark from device A
-    3. Call /api/attendance/mark from device B (different device)
+    2. Call /attendance/mark from device A
+    3. Call /attendance/mark from device B (different device)
     4. Both should succeed without device binding errors
     """
     # 1. Register a teacher
@@ -91,7 +91,7 @@ async def test_teacher_exempt_from_device_binding(client: AsyncClient, db):
         mock_detect.return_value = {"success": True, "faces": []}
 
         response = await client.post(
-            "/api/attendance/mark",
+            "/attendance/mark",
             json={
                 "image": "data:image/jpeg;base64,fake_image_data",
                 "subject_id": subject_id,
@@ -115,7 +115,7 @@ async def test_teacher_exempt_from_device_binding(client: AsyncClient, db):
         mock_detect.return_value = {"success": True, "faces": []}
 
         response = await client.post(
-            "/api/attendance/mark",
+            "/attendance/mark",
             json={
                 "image": "data:image/jpeg;base64,fake_image_data",
                 "subject_id": subject_id,
@@ -215,7 +215,7 @@ async def test_student_device_binding_enforcement(client: AsyncClient, db):
         mock_detect.return_value = {"success": True, "faces": []}
 
         response = await client.post(
-            "/api/attendance/mark",
+            "/attendance/mark",
             json={
                 "image": "data:image/jpeg;base64,fake_image_data",
                 "subject_id": subject_id,
@@ -244,7 +244,7 @@ async def test_student_device_binding_enforcement(client: AsyncClient, db):
         mock_detect.return_value = {"success": True, "faces": []}
 
         response = await client.post(
-            "/api/attendance/mark",
+            "/attendance/mark",
             json={
                 "image": "data:image/jpeg;base64,fake_image_data",
                 "subject_id": subject_id,

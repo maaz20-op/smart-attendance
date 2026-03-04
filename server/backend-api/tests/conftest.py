@@ -98,17 +98,23 @@ async def db(db_client):
         except Exception:
             pass
 
-    try:
-        yield database
-    finally:
-        for p in reversed(started_patchers):
-            p.stop()
+    yield database
 
+    # Stop patches
+    for p in reversed(started_patchers):
+        p.stop()
+    
     # Cleanup after test
     try:
         await db_client.drop_database(db_name)
     except Exception:
         pass
+
+@pytest.fixture(autouse=True)
+def mock_all_emails():
+    """Globally mock BrevoEmailService to prevent network calls/errors during tests."""
+    with patch("app.core.email.BrevoEmailService._send_email", new_callable=AsyncMock) as mock:
+        yield mock
 
 
 @pytest_asyncio.fixture(scope="function")
