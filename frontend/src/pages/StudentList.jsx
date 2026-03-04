@@ -3,13 +3,13 @@ import {
   Search,  
   Download, 
   Plus, 
-  MoreHorizontal, 
   ArrowUpRight,
   ArrowDownRight
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { fetchMySubjects, fetchSubjectStudents } from "../api/teacher";
+import { toast } from "react-hot-toast";
+import { fetchMySubjects, fetchSubjectStudents, fetchStudentsTrends, exportStudentRoster } from "../api/teacher";
 
 export default function StudentList() {
   const { t } = useTranslation();
@@ -17,9 +17,11 @@ export default function StudentList() {
   const [subjectsLoading, setSubjectsLoading] = useState(true);
   const [selectedSubject, setSelectedSubject] = useState(null);
   const [students, setStudents] = useState([]);
+  const [trends, setTrends] = useState({});
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedFilter, setSelectedFilter] = useState("All");
-  const [sortOrder, setSortOrder] = useState("desc"); // "asc" or "desc"
+  const [sortOrder, setSortOrder] = useState("desc");
+  const [isExporting, setIsExporting] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -33,7 +35,20 @@ export default function StudentList() {
 
   useEffect(() => {
     if(!selectedSubject) return;
-    fetchSubjectStudents(selectedSubject).then(setStudents);
+    
+    // Fetch students and trends in parallel
+    Promise.all([
+      fetchSubjectStudents(selectedSubject),
+      fetchStudentsTrends(selectedSubject)
+    ])
+      .then(([studentsData, trendsData]) => {
+        setStudents(studentsData);
+        setTrends(trendsData);
+      })
+      .catch((error) => {
+        console.error("Failed to fetch student data:", error);
+        toast.error("Failed to load student data");
+      });
   }, [selectedSubject])
 
   const verifiedStudents = students.filter(
@@ -81,9 +96,28 @@ export default function StudentList() {
     return sortOrder === "desc" ? percentageB - percentageA : percentageA - percentageB;
   });
 
-  // Toggle sort order
   const handleSortToggle = () => {
     setSortOrder(prev => prev === "desc" ? "asc" : "desc");
+  };
+
+  const handleExportRoster = async () => {
+    setIsExporting(true);
+    try {
+      const blob = await exportStudentRoster(selectedSubject);
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `student_roster_${new Date().toISOString().split('T')[0]}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+      toast.success("Roster exported successfully");
+    } catch {
+      toast.error("Failed to export roster");
+    } finally {
+      setIsExporting(false);
+    }
   };
 
 
@@ -131,9 +165,12 @@ export default function StudentList() {
           <p className="text-[var(--text-body)]">{t('students.subtitle')}</p>
         </div>
         <div className="flex items-center gap-3">
-          <button className="px-4 py-2 bg-[var(--bg-card)] border border-[var(--border-color)] text-[var(--text-main)] rounded-lg hover:bg-[var(--bg-secondary)] font-medium flex items-center gap-2 transition cursor-pointer">
+          <button 
+            onClick={handleExportRoster}
+            disabled={isExporting}
+            className="px-4 py-2 bg-[var(--bg-card)] border border-[var(--border-color)] text-[var(--text-main)] rounded-lg hover:bg-[var(--bg-secondary)] font-medium flex items-center gap-2 transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed">
             <Download size={18} />
-            {t('students.export_list')}
+            {isExporting ? t('common.loading', 'Loading...') : t('students.export_list')}
           </button>
           <button
            onClick={() => navigate('/add-students')}
@@ -270,13 +307,12 @@ export default function StudentList() {
                     <th className="px-6 py-4">{t('students.table.student')}</th>
                     <th className="px-6 py-4">{t('students.table.visual_grade')}</th>
                     <th className="px-6 py-4">{t('students.table.trend')}</th>
-                    <th className="px-6 py-4 text-right">{t('students.table.actions')}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[var(--border-color)]">
                   {sortedStudents.length === 0 ? (
                     <tr>
-                      <td colSpan="5" className="px-6 py-12 text-center">
+                      <td colSpan="4" className="px-6 py-12 text-center">
                         <div className="text-[var(--text-body)] opacity-80">
                           <p className="text-lg font-medium">{t('students.no_students_found')}</p>
                           <p className="text-sm mt-1">
@@ -292,11 +328,12 @@ export default function StudentList() {
                   ) : (
                     sortedStudents.map((student) => {
                       const percentage = calculateAttendancePercentage(student);
+                      const studentTrend = trends[student.student_id] || { trend: 0 };
+                      const trend = studentTrend.trend;
 
                     // derive UI-only values (NO design change)
                     let color = "amber";
                     let status = t('students.status.moderate');
-                    let trend = 0;
 
                     if (percentage > 90) {
                       color = "green";
@@ -352,30 +389,24 @@ export default function StudentList() {
                           </div>
                         </td>
 
-                        {/* Trend Column (placeholder, unchanged UI) */}
+                        {/* Trend Column */}
                         <td className="px-6 py-4">
                           {trend > 0 ? (
                             <div className="flex items-center gap-1 text-xs font-semibold text-[var(--success)]">
                               <ArrowUpRight size={14} />
-                              +{trend}% {t('students.trend.vs_last_month')}
+                              <span>+{Math.abs(trend)}%</span>
                             </div>
                           ) : trend < 0 ? (
                             <div className="flex items-center gap-1 text-xs font-semibold text-[var(--danger)]">
                               <ArrowDownRight size={14} />
-                              {trend}% {t('students.trend.vs_last_month')}
+                              <span>-{Math.abs(trend)}%</span>
                             </div>
                           ) : (
-                            <div className="text-xs font-medium text-[var(--text-body)]/70">
-                              {t('students.trend.no_change')}
+                            <div className="flex items-center gap-1 text-xs font-medium text-[var(--text-body)]/70">
+                              <span>—</span>
+                              <span>{t('students.trend.stable')}</span>
                             </div>
                           )}
-                        </td>
-
-                        {/* Actions Column */}
-                        <td className="px-6 py-4 text-right">
-                          <button className="text-[var(--text-body)]/50 hover:text-[var(--text-body)] p-1 hover:bg-[var(--bg-secondary)] rounded-full transition">
-                            <MoreHorizontal size={20} />
-                          </button>
                         </td>
                       </tr>
                     );

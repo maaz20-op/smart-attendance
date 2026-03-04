@@ -1,15 +1,15 @@
 import logging
-from datetime import datetime, date
+from datetime import datetime, date, timezone
 from typing import Dict, List, Any
 
 import socketio
-from datetime import datetime, date, UTC
 from bson import ObjectId
 from pymongo import UpdateOne
 
 from app.core.config import ORIGINS
 from app.db.mongo import db
-from app.utils.geo import calculate_distance
+from app.services.attendance import log_grouped_attendance
+from app.services.attendance_daily import save_daily_summary
 
 logger = logging.getLogger(__name__)
 
@@ -30,6 +30,7 @@ active_sessions: Dict[str, List[Dict[str, Any]]] = {}
 # Key: session_id
 # Value: { lat: float, lon: float, subjectIdx: str }
 session_locations: Dict[str, Dict[str, Any]] = {}
+
 
 @sio.event
 async def connect(sid, environ):
@@ -227,26 +228,53 @@ async def flush_attendance_data():
                     f"Flushed {len(operations)} records for session {session_id}"
                 )
 
-                # Insert logs
-                log_entries = []
+                # Insert grouped logs
+                subject_doc = await db.subjects.find_one({"_id": ObjectId(subject_id)})
+                teacher_id = (
+                    subject_doc["professor_ids"][0]
+                    if subject_doc and subject_doc.get("professor_ids")
+                    else None
+                )
+
+                log_students_data = []
                 for scan in unique_scans:
-                    log_entries.append(
+                    log_students_data.append(
                         {
-                            "student_id": ObjectId(scan["studentId"]),
-                            "subject_id": ObjectId(subject_id),
-                            "date": today_str,
-                            "timestamp": scan["timestamp"],
-                            "createdAt": datetime.now(UTC),
-                            "session_id": session_id,
+                            "studentId": ObjectId(scan["studentId"]),
+                            "scanTime": scan["timestamp"],
+                            "method": "qr",
+                            "sessionId": session_id,
                             "latitude": scan["location"]["lat"],
                             "longitude": scan["location"]["lon"],
-                            "distance_from_teacher": scan["distance"],
-                            "is_proxy_suspected": scan["isProxy"],
-                            "method": "qr",
+                            "distance": scan["distance"],
+                            "isProxy": scan["isProxy"],
                         }
                     )
-                if log_entries:
-                    await db.attendance_logs.insert_many(log_entries)
+                
+                updated_logs = None
+                if log_students_data:
+                    updated_logs = await log_grouped_attendance(
+                        subject_id=subject_id,
+                        date_str=today_str,
+                        students=log_students_data,
+                        teacher_id=teacher_id,
+                    )
+
+                # Update Analytics
+                if updated_logs and "students" in updated_logs:
+                    present_count = len(updated_logs["students"])
+                    total_enrolled = (
+                        len(subject_doc.get("students", [])) if subject_doc else 0
+                    )
+                    absent_count = max(0, total_enrolled - present_count)
+
+                    await save_daily_summary(
+                        subject_id=ObjectId(subject_id),
+                        teacher_id=teacher_id,
+                        record_date=today_str,
+                        present=present_count,
+                        absent=absent_count,
+                    )
 
             # Clear flushed items (keep session active but clear buffer)
             active_sessions[session_id] = []
@@ -283,8 +311,15 @@ async def stop_and_save_session(session_id: str):
                     today_str = date.today().isoformat()
                     unique_scans = {s["studentId"]: s for s in scans}.values()
 
-                    log_entries = []
+                    # Grouped Logs & Analytics
+                    subject_doc = await db.subjects.find_one({"_id": ObjectId(subject_id)})
+                    teacher_id = (
+                        subject_doc["professor_ids"][0]
+                        if subject_doc and subject_doc.get("professor_ids")
+                        else None
+                    )
 
+                    log_students_data = []
                     for scan in unique_scans:
                         student_oid = ObjectId(scan["studentId"])
                         attendance_record = {
@@ -317,26 +352,45 @@ async def stop_and_save_session(session_id: str):
                         )
                         operations.append(op_subjects)
 
-                        log_entries.append(
+                        log_students_data.append(
                             {
-                                "student_id": ObjectId(scan["studentId"]),
-                                "subject_id": ObjectId(subject_id),
-                                "date": today_str,
-                                "timestamp": scan["timestamp"],
-                                "createdAt": datetime.now(UTC),
-                                "session_id": session_id,
+                                "studentId": ObjectId(scan["studentId"]),
+                                "scanTime": scan["timestamp"],
+                                "method": "qr",
+                                "sessionId": session_id,
                                 "latitude": scan["location"]["lat"],
                                 "longitude": scan["location"]["lon"],
-                                "distance_from_teacher": scan["distance"],
-                                "is_proxy_suspected": scan["isProxy"],
-                                "method": "qr",
+                                "distance": scan["distance"],
+                                "isProxy": scan["isProxy"],
                             }
+                        )
+
+                    updated_logs = None
+                    if log_students_data:
+                        updated_logs = await log_grouped_attendance(
+                            subject_id=subject_id,
+                            date_str=today_str,
+                            students=log_students_data,
+                            teacher_id=teacher_id,
+                        )
+
+                    if updated_logs and "students" in updated_logs:
+                        present_count = len(updated_logs["students"])
+                        total_enrolled = (
+                            len(subject_doc.get("students", [])) if subject_doc else 0
+                        )
+                        absent_count = max(0, total_enrolled - present_count)
+
+                        await save_daily_summary(
+                            subject_id=ObjectId(subject_id),
+                            teacher_id=teacher_id,
+                            record_date=today_str,
+                            present=present_count,
+                            absent=absent_count,
                         )
 
                     if operations:
                         await db.subjects.bulk_write(operations)
-                        if log_entries:
-                            await db.attendance_logs.insert_many(log_entries)
                         result_msg = f"Saved {len(operations)} records."
                 except Exception as e:
                     logger.error(f"Error saving session {session_id}: {e}")

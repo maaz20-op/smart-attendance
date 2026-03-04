@@ -17,7 +17,9 @@
       "current": "Current",
       "safe_zone_label": "Safe zone: {{percent}}%",
       "need_classes_title": "You need {{count}} more classes",
-      "need_classes_desc": "Attend the next {{count}} scheduled classes to reach the safe {{percent}}% attendance zone buffer."
+      "need_classes_desc": "Attend the next {{count}} scheduled classes to reach the safe {{percent}}% attendance zone buffer.",
+      "target_achieved_title": "Target achieved!",
+      "target_achieved_desc": "You are currently above the {{percent}}% target attendance. Maintain your streak!"
     },
     "schedule": {
       "today": "Today",
@@ -70,7 +72,8 @@
     },
     "errors": {
       "load_failed": "Failed to load subjects"
-    }
+    },
+    "enroll_subject": "Enroll subject"
   },
   "forecast": {
     "title": "History & forecast",
@@ -120,7 +123,11 @@
       "desc": "Upload a clear, high-quality photo. This will be used for face recognition during attendance.",
       "replace": "Replace photo",
       "upload": "Upload photo",
-      "tips": "Tips: Use good lighting, look straight at the camera, avoid masks, caps, or filters."
+      "tips": "Tips: Use good lighting, look straight at the camera, avoid masks, caps, or filters.",
+      "error_size": "Image too large. Maximum size is 5MB",
+      "error_type": "Invalid file type. Only JPEG and PNG images are allowed",
+      "error_dimensions": "Image dimensions too large. Maximum size is 4096x4096 pixels",
+      "error_load": "Failed to load image. Please try another file"
     },
     "summary": {
       "title": "Attendance summary",
@@ -137,7 +144,11 @@
       "add_btn": "Add subject",
       "modal_title": "Add Subject",
       "cancel": "Cancel"
-    }
+    },
+    "enroll_subject": "Enroll subject",
+    "appearance": "Appearance",
+    "biometric_auth": "Biometric authentication",
+    "logout": "Logout"
   },
   "welcome": "Welcome",
   "login": {
@@ -238,6 +249,10 @@
     "title": "Teacher dashboard",
     "subtitle": "Overview of today's attendance and upcoming classes",
     "download_report": "Download report",
+    "generating": "Generating...",
+    "generating_report": "Generating report, please wait...",
+    "report_downloaded": "Report downloaded successfully",
+    "report_failed": "Failed to download report",
     "start_attendance": "Start attendance",
     "greeting": "Good morning, {{name}}",
     "start_session": "Start attendance session",
@@ -249,7 +264,9 @@
     },
     "stats": {
       "attendance_rate": "Today's attendance rate",
-      "increase": "+3% vs last week",
+      "attendance_rate_week": "This weeks attendance rate",
+      "increase": "Trending up",
+      "decrease": "Trending down",
       "absent": "Absent",
       "all_classes": "Across all classes",
       "late_arrivals": "Late arrivals",
@@ -269,7 +286,8 @@
       "chart_area": "Chart Area",
       "present": "Present",
       "absent": "Absent",
-      "late": "Late"
+      "late": "Late",
+      "no_data": "No data this week"
     },
     "classes": {
       "completed": "Completed",
@@ -297,7 +315,8 @@
     "status": {
       "live": "Live • Active",
       "waking_up": "Waking up...",
-      "connecting": "Connecting..."
+      "connecting": "Connecting...",
+      "offline": "Offline Mode"
     },
     "camera_overlay": {
       "recognition_running": "Recognition running • Auto-marking present",
@@ -323,7 +342,13 @@
       "success": "Attendance saved successfully",
       "failed": "Failed to save attendance",
       "location_issue_title": "Location Service Issue",
-      "select_subject_first": "Please select a subject first"
+      "select_subject_first": "Please select a subject first",
+      "sync_auto": "Will sync automatically when online",
+      "pending_sync_records": "record(s) pending sync",
+      "online_restored": "Connection restored. Syncing...",
+      "offline_mode": "You are offline. Attendance will be saved locally.",
+      "saved_offline": "Saved offline. Will sync when online.",
+      "offline_save_failed": "Failed to save offline data."
     }
   },
   "students": {
@@ -354,7 +379,8 @@
     },
     "trend": {
       "no_change": "No change",
-      "vs_last_month": "vs last month"
+      "vs_last_month": "vs last month",
+      "stable": "Stable"
     },
     "no_students_found": "No students found",
     "no_match": "No students match \"{{query}}\"",
@@ -389,6 +415,13 @@
     "manage_holidays": "Manage holidays and events",
     "month": "Month",
     "year": "Year",
+    "legend": "Legend",
+    "holiday_sunday": "Holiday/Sunday",
+    "exam_day": "Exam Day",
+    "today": "Today",
+    "sunday": "Sunday",
+    "holidays_title": "Holidays",
+    "holidays_desc": "Manage non-instructional days",
     "recurring_timetable": "Recurring timetable",
     "recurring_desc": "Mon-Fri use default weekly pattern",
     "exam_days": "Exam days",
@@ -457,6 +490,8 @@
       "actions": "Actions"
     },
     "status_unverified": "Unverified",
+    "status_verified": "Verified",
+    "status_ready_to_verify": "Ready to verify",
     "status_waiting_image": "Waiting image",
     "added_time": "Added {{time}}",
     "actions": {
@@ -540,7 +575,11 @@
     },
     "lists": {
       "best": "Best performing classes",
-      "needs_support": "Classes needing support"
+      "needs_support": "Classes needing support",
+      "best_students": "Best performing students",
+      "needs_support_students": "Students needing support",
+      "no_students_at_risk": "No students at risk",
+      "no_top_performers": "No students meeting threshold"
     },
     "breakdown": {
       "title": "Class-wise breakdown",
@@ -631,6 +670,12 @@
       "cancel": "Cancel",
       "save": "Save changes",
       "saving": "Saving..."
+    },
+    "notifications": {
+      "not_supported": "This browser does not support desktop notifications",
+      "enabled": "Notifications enabled",
+      "permission_denied": "Notification permission denied",
+      "permission_denied_browser": "Notifications are blocked by your browser. Please enable them in site settings."
     },
     "thresholds": {
       "title": "Attendance thresholds",

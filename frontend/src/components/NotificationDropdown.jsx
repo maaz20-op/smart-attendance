@@ -3,9 +3,10 @@ import { Bell, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import {
   getInAppNotifications,
-  markNotificationAsRead,
-  markAllNotificationsAsRead,
+  deleteNotification,
+  deleteAllNotifications,
 } from "../api/notifications";
+import { showSystemNotification } from "../utils/notificationService";
 
 export default function NotificationDropdown() {
   const { t } = useTranslation();
@@ -14,18 +15,49 @@ export default function NotificationDropdown() {
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(false);
   const dropdownRef = useRef(null);
+  const isFirstLoad = useRef(true);
+  const previousNotificationsRef = useRef([]);
 
   // Fetch notifications
   const fetchNotifications = async () => {
+    const token = localStorage.getItem("token");
+    if (!token) return;
+
     try {
-      setLoading(true);
+      if (isFirstLoad.current) setLoading(true);
+      
       const data = await getInAppNotifications();
-      setNotifications(data.notifications || []);
-      setUnreadCount(data.unread_count || 0);
+      const newItems = data.notifications || [];
+      const newUnread = data.unread_count || 0;
+
+      // Check for new notifications to trigger system alert
+      if (!isFirstLoad.current && newItems.length > 0) {
+           // Compare with ref to avoid stale closure issues
+           const previous = previousNotificationsRef.current;
+           const newlyAdded = newItems.filter(n => !previous.find(existing => existing._id === n._id));
+           
+           if (newlyAdded.length > 0) {
+             newlyAdded.forEach(item => {
+                 showSystemNotification(item.title || "New Notification", {
+                     body: item.message,
+                     tag: item._id,
+                     icon: '/pwa-192x192.png'
+                 });
+             });
+           }
+      }
+
+      // Update refs and state
+      previousNotificationsRef.current = newItems;
+      setNotifications(newItems);
+      setUnreadCount(newUnread);
     } catch (error) {
       console.error("Failed to fetch notifications:", error);
     } finally {
-      setLoading(false);
+      if (isFirstLoad.current) {
+          setLoading(false);
+          isFirstLoad.current = false;
+      }
     }
   };
 
@@ -70,31 +102,25 @@ export default function NotificationDropdown() {
 
   const handleNotificationClick = async (notificationId) => {
     try {
-      await markNotificationAsRead(notificationId);
-      // Update local state
+      await deleteNotification(notificationId);
+      // Update local state - remove the notification
       setNotifications(
-        notifications.map((notif) =>
-          notif._id === notificationId
-            ? { ...notif, is_read: true }
-            : notif
-        )
+        notifications.filter((notif) => notif._id !== notificationId)
       );
       setUnreadCount(Math.max(0, unreadCount - 1));
     } catch (error) {
-      console.error("Failed to mark notification as read:", error);
+      console.error("Failed to delete notification:", error);
     }
   };
 
   const handleMarkAllAsRead = async () => {
     try {
-      await markAllNotificationsAsRead();
-      // Update local state
-      setNotifications(
-        notifications.map((notif) => ({ ...notif, is_read: true }))
-      );
+      await deleteAllNotifications();
+      // Update local state - clear all notifications
+      setNotifications([]);
       setUnreadCount(0);
     } catch (error) {
-      console.error("Failed to mark all notifications as read:", error);
+      console.error("Failed to delete all notifications:", error);
     }
   };
 
@@ -172,10 +198,7 @@ export default function NotificationDropdown() {
                 {notifications.map((notification) => (
                   <div
                     key={notification._id}
-                    onClick={() =>
-                      !notification.is_read &&
-                      handleNotificationClick(notification._id)
-                    }
+                    onClick={() => handleNotificationClick(notification._id)}
                     className={`p-4 cursor-pointer transition-colors ${
                       notification.is_read
                         ? "bg-[var(--bg-card)]"
@@ -204,7 +227,7 @@ export default function NotificationDropdown() {
           </div>
 
           {/* Footer */}
-          {notifications.length > 0 && unreadCount > 0 && (
+          {notifications.length > 0 && (
             <div className="p-4 border-t border-[var(--border-color)]">
               <button
                 onClick={handleMarkAllAsRead}

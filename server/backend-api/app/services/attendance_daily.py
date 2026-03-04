@@ -1,4 +1,4 @@
-from datetime import datetime, UTC
+from datetime import datetime, timezone
 
 from bson import ObjectId
 
@@ -13,12 +13,11 @@ async def ensure_indexes():
         [("subjectId", 1)],
         unique=True,
     )
-    
-    # Expire documents 86400 seconds (24 hours) after the 'createdAt' time
+
+    # Expire documents 7 days after creation
     await db.attendance_logs.create_index(
-        "createdAt", 
-        expireAfterSeconds=86400,
-        background=True
+        "createdAt",
+        expireAfterSeconds=604800,  # 7 days in seconds
     )
 
 
@@ -56,11 +55,11 @@ async def save_daily_summary(
                 "total": total,
                 "percentage": percentage,
             },
-            "updatedAt": datetime.now(UTC),
+            "updatedAt": datetime.now(timezone.utc),
         },
         "$setOnInsert": {
             "subjectId": subject_id,
-            "createdAt": datetime.now(UTC),
+            "createdAt": datetime.now(timezone.utc),
         },
     }
 

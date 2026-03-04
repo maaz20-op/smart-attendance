@@ -17,9 +17,15 @@ class Settings(BaseSettings):
     ML_MODEL: str = "hog"
     NUM_JITTERS: int = 5
     MIN_FACE_AREA_RATIO: float = 0.04
+    
+    # Liveness Detection (Anti-Spoofing)
+    ML_LIVENESS_CHECK: bool = True
 
-    # 👇 IMPORTANT FIX
-    CORS_ORIGINS: Union[str, List[str]] = ["*"]
+
+    CORS_ORIGINS: Union[str, List[str]] = [
+        "https://studentcheck.vercel.app",
+        "http://localhost:5173",
+    ]
 
     LOG_LEVEL: str = "info"
     API_KEY: str = "your-secret-api-key-here"
