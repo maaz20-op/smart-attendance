@@ -52,7 +52,7 @@ export default function MarkAttendance() {
     return `${year}-${month}-${day}`;
   });
   
-  const [_currentCoords, setCurrentCoords] = useState(null);
+  const [_currentCoords] = useState(null);
   const [showQRModal, setShowQRModal] = useState(false);
   const [sessionId, setSessionId] = useState(null);
   
