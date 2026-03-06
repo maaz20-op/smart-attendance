@@ -148,6 +148,7 @@ async def client(db):
     """
     from app.main import create_app
     from app.core.limiter import limiter
+
     app = create_app()
 
     # Disable rate limiting for tests (redundant with autouse but safe)
@@ -222,9 +223,8 @@ async def auth_token(client, db, test_user_data):
     print("STATUS:", response.status_code)
     print("BODY:", response.json())
 
-    
     return response.json()["token"]
- 
+
 
 @pytest.fixture
 def make_token_header():
