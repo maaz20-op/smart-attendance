@@ -817,12 +817,8 @@ async def confirm_attendance(payload: AttendanceConfirm):
         unique_present = set(str(s["studentId"]) for s in updated_logs_doc["students"])
         total_present_today = len(unique_present)
     else:
-<<<<<<< HEAD
-        # Try fetch if logs exist but weren't updated in this call (e.g. only absent students sent)
-=======
         # Try fetch if logs exist but weren't updated in this call
         # (e.g. only absent students sent)
->>>>>>> c22d217031a31c94ffc439b5ae01e1eb988c53d4
         existing_logs = await db.attendance_logs.find_one(
             {"subjectId": subject_oid, "date": today}
         )
@@ -830,51 +826,6 @@ async def confirm_attendance(payload: AttendanceConfirm):
             unique_present = set(str(s["studentId"]) for s in existing_logs["students"])
             total_present_today = len(unique_present)
 
-<<<<<<< HEAD
-    await save_daily_summary(
-        subject_id=subject_oid,
-        teacher_id=teacher_id,
-        record_date=today,
-        present=total_present_today,
-        absent=len(absent_set),
-    )
-
-    return {
-        "ok": True,
-        "present_updated": len(present_set),
-        "absent_updated": len(absent_set),
-    }
-    # ideally rely on the cumulative logs for 'present'.
-    # For 'absent', since we don't log them in 'attendance_logs',
-    # we might need to rely on accumulation or just overwrite?
-    # The current 'save_daily_summary' overwrites.
-    # If we want to support incremental updates properly,
-    # 'save_daily_summary' should use $inc or we must read-modify-write.
-
-    total_present_today = len(present_set)
-    if updated_logs_doc and "students" in updated_logs_doc:
-        # Count unique student IDs in logs to get total present for the day
-        unique_present = set(str(s["studentId"]) for s in updated_logs_doc["students"])
-        total_present_today = len(unique_present)
-    elif not updated_logs_doc:
-        # If no present students in this batch, check if there are existing logs
-        existing_logs = await db.attendance_logs.find_one(
-            {"subjectId": subject_oid, "date": today}
-        )
-        if existing_logs and "students" in existing_logs:
-            unique_present = set(str(s["studentId"]) for s in existing_logs["students"])
-            total_present_today = len(unique_present)
-
-    # For absent, it's harder because we don't log them.
-    # For now, we will use the batch count, but this is flawed for multiple batches.
-    # However, 'absent' is usually calculated as Total - Present.
-    # Let's assume the teacher confirms ONCE or in one session.
-    # The offline sync might break this assumption for 'absent'.
-    # But usually offline sync confirms *Present* scans.
-    # 'Absent' handling might need a different approach or just stick to batch for now.
-
-=======
->>>>>>> c22d217031a31c94ffc439b5ae01e1eb988c53d4
     # Correctly calculate absent students based on total enrollment
     # This fixes the issue where offline partial syncs overwrite 'absent' with 0
     total_enrolled = len(subject.get("students", []))

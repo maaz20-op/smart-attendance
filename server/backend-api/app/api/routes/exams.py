@@ -138,12 +138,8 @@ async def update_exam(
 
     date_str = payload.date.isoformat()
 
-<<<<<<< HEAD
-    # Check if we are moving the exam to a date that already has an exam (and it's not THIS exam)
-=======
     # Check if we are moving the exam to a date that already has an exam (and
     # it's not THIS exam)
->>>>>>> c22d217031a31c94ffc439b5ae01e1eb988c53d4
     existing_date = await db.exams.find_one(
         {"teacher_id": teacher_oid, "date": date_str, "_id": {"$ne": ObjectId(exam_id)}}
     )
