@@ -770,36 +770,6 @@ smart-attendance/
 
 ## 📡 API Documentation
 
-## 🔄 API Versioning & Legacy Route Support
-
-This project uses versioned API routes under the `/api/v1` prefix.
-
-Example:
-
-POST /api/v1/auth/login
-
-### Backward Compatibility
-
-To ensure stability for existing clients, legacy routes are still supported without redirection.
-
-Example:
-
-POST /api/auth/login → internally handled as /api/v1/auth/login
-
-⚠️ Note:
-Redirect-based middleware was avoided because it interferes with CORS preflight (`OPTIONS`) requests in browsers.
-
-Instead of using HTTP redirects (301/302), legacy routes are explicitly mapped to the new versioned routes to prevent CORS issues and maintain compatibility.
-
-### Recommendation for Developers
-
-New integrations should always use the versioned routes:
-
-/api/v1/...
-
-Legacy routes may be removed in future major releases.
-
-
 ### Base URL
 
 ```text
@@ -826,7 +796,7 @@ Authorization: Bearer <your-jwt-token>
 ##### Register User
 
 ```http
-POST /api/v1/auth/register
+POST /api/auth/register
 Content-Type: application/json
 
 {
@@ -840,7 +810,7 @@ Content-Type: application/json
 ##### Login
 
 ```http
-POST /api/v1/auth/login
+POST /api/auth/login
 Content-Type: application/json
 
 {
@@ -883,7 +853,7 @@ GET /auth/google/callback?code=<authorization-code>
 ##### Get All Students
 
 ```http
-GET /api/v1/students
+GET /api/students
 Authorization: Bearer <token>
 ```
 
@@ -905,7 +875,7 @@ Authorization: Bearer <token>
 ##### Add Student
 
 ```http
-POST /api/v1/students
+POST /api/students
 Authorization: Bearer <token>
 Content-Type: multipart/form-data
 
@@ -920,7 +890,7 @@ Content-Type: multipart/form-data
 ##### Get Student Details
 
 ```http
-GET /api/v1/students/{student_id}
+GET /api/students/{student_id}
 Authorization: Bearer <token>
 ```
 
@@ -929,7 +899,7 @@ Authorization: Bearer <token>
 ##### Mark Attendance
 
 ```http
-POST /api/v1/attendance/mark
+POST /api/attendance/mark
 Authorization: Bearer <token>
 Content-Type: application/json
 
@@ -968,14 +938,14 @@ Content-Type: application/json
 ##### Get Attendance Records
 
 ```http
-GET /api/v1/attendance?subject_id={id}&date={YYYY-MM-DD}
+GET /api/attendance?subject_id={id}&date={YYYY-MM-DD}
 Authorization: Bearer <token>
 ```
 
 ##### Get Student Attendance
 
 ```http
-GET /api/v1/attendance/student/{student_id}
+GET /api/attendance/student/{student_id}
 Authorization: Bearer <token>
 ```
 
@@ -984,14 +954,14 @@ Authorization: Bearer <token>
 ##### Get All Subjects
 
 ```http
-GET /api/v1/classes
+GET /api/classes
 Authorization: Bearer <token>
 ```
 
 ##### Create Subject
 
 ```http
-POST /api/v1/classes
+POST /api/classes
 Authorization: Bearer <token>
 Content-Type: application/json
 
@@ -1005,7 +975,7 @@ Content-Type: application/json
 ##### Get Subject Details
 
 ```http
-GET /api/v1/classes/{subject_id}
+GET /api/classes/{subject_id}
 Authorization: Bearer <token>
 ```
 
@@ -1014,7 +984,7 @@ Authorization: Bearer <token>
 ##### Upload Student Face
 
 ```http
-POST /api/v1/face/upload
+POST /api/face/upload
 Authorization: Bearer <token>
 Content-Type: multipart/form-data
 
@@ -1027,7 +997,7 @@ Content-Type: multipart/form-data
 ##### Verify Face
 
 ```http
-POST /api/v1/face/verify
+POST /api/face/verify
 Authorization: Bearer <token>
 Content-Type: application/json
 
@@ -1042,14 +1012,14 @@ Content-Type: application/json
 ##### Get Settings
 
 ```http
-GET /api/v1/teacher-settings
+GET /api/teacher-settings
 Authorization: Bearer <token>
 ```
 
 ##### Update Settings
 
 ```http
-PUT /api/v1/teacher-settings
+PUT /api/teacher-settings
 Authorization: Bearer <token>
 Content-Type: application/json
 

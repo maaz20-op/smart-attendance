@@ -29,8 +29,3 @@ playwright-report
 *.njsproj
 *.sln
 *.sw?
-
-# env files ( Environment Variables )
-.env
-.env.*
-!.env.example

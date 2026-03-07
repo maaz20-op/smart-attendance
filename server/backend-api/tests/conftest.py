@@ -146,10 +146,8 @@ async def client(db):
     """
     Async client for API requests.
     """
-    from app.main import create_app
+    from app.main import app
     from app.core.limiter import limiter
-
-    app = create_app()
 
     # Disable rate limiting for tests (redundant with autouse but safe)
     limiter.enabled = False
@@ -158,7 +156,7 @@ async def client(db):
     # app.db.mongo.db should point to 'test_smart_attendance' because of env var.
 
     async with AsyncClient(
-        transport=ASGITransport(app=app), base_url="http://test/api/v1"
+        transport=ASGITransport(app=app), base_url="http://test"
     ) as ac:
         yield ac
 
@@ -217,12 +215,7 @@ async def auth_token(client, db, test_user_data):
         "email": test_user_data["email"],
         "password": test_user_data["password"],
     }
-
     response = await client.post("/auth/login", json=login_data)
-
-    print("STATUS:", response.status_code)
-    print("BODY:", response.json())
-
     return response.json()["token"]
 
 
